@@ -293,10 +293,12 @@
 <!-- MAIN APP SCREEN -->
 <div id="appScreen" class="container hidden">
   <h1 style="justify-content: space-between;">
-    <span>💰 Budget Manager</span>
+  <span>💰 Budget Manager</span>
+  <div style="display: flex; gap: 0.5rem;">
+    <button class="btn btn-secondary btn-small hidden" id="installBtn">📥 Install</button>
     <button class="btn btn-secondary btn-small" id="logoutBtn">Log Out</button>
-  </h1>
-
+  </div>
+</h1>
   <div class="total-card">
     <div class="total-label">Grand Total (all fields)</div>
     <div class="total-amount" id="totalDisplay">$0.00</div>
