@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a2540">
+<title>Budget Manager</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f0f4fa; color: #0a2540;
+    font-size: 16px; padding-bottom: 2rem;
+  }
+  .container { max-width: 600px; margin: 0 auto; padding: 1rem; }
+  h1 { font-size: 1.5rem; margin: 0.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem; }
+
+  .total-card {
+    background: linear-gradient(135deg, #0a2540, #1d3b5c);
+    color: white; padding: 1.5rem; border-radius: 1.25rem;
+    margin-bottom: 1rem; box-shadow: 0 6px 18px -4px rgba(10,37,64,0.4);
+  }
+  .total-label { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; margin-bottom: 0.4rem; }
+  .total-amount { font-size: 2.4rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+  .total-amount.negative { color: #ff9a9a; }
+
+  .breakdown-card {
+    background: white; border-radius: 1.25rem;
+    padding: 1.25rem; margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(10,37,64,0.06);
+  }
+  .breakdown-card h3 {
+    font-size: 0.85rem; text-transform: uppercase;
+    letter-spacing: 1px; color: #3d5772;
+    margin: 0 0 0.75rem; font-weight: 700;
+  }
+  .breakdown-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.55rem 0.75rem; background: #f6f9fe;
+    border-radius: 0.7rem; margin-bottom: 0.4rem;
+    font-size: 0.95rem;
+  }
+  .breakdown-row .label { font-weight: 500; display: flex; align-items: center; gap: 0.5rem; }
+  .breakdown-row .color-dot {
+    width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+    border: 2px solid rgba(0,0,0,0.1);
+  }
+  .breakdown-row .amt { font-weight: 700; color: #1d3b5c; }
+  .breakdown-row .amt.negative { color: #d14b4b; }
+  .breakdown-empty { color: #8a9cb0; font-size: 0.85rem; font-style: italic; padding: 0.3rem 0.2rem; }
+
+  .card {
+    background: white; border-radius: 1.25rem;
+    padding: 1.25rem; margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(10,37,64,0.06);
+  }
+  .card h2 { font-size: 1.1rem; margin: 0 0 1rem; display: flex; align-items: center; gap: 0.4rem; }
+
+  input, select, textarea, button { font-family: inherit; font-size: 16px; }
+  .input-group { margin-bottom: 0.9rem; }
+  .input-group label {
+    display: block; font-size: 0.8rem; font-weight: 600;
+    color: #3d5772; margin-bottom: 0.35rem;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .input-group label .optional { color: #9aa9b9; font-weight: 400; text-transform: none; letter-spacing: 0; }
+  input[type="text"], input[type="number"], input[type="date"], select, textarea {
+    width: 100%; padding: 0.9rem 1rem;
+    border: 1.5px solid #dbe2ea; border-radius: 0.9rem;
+    background: #fafbfe; outline: none;
+    transition: border-color 0.15s;
+    -webkit-appearance: none; appearance: none;
+  }
+  input:focus, select:focus, textarea:focus { border-color: #1d3b5c; background: white; }
+  textarea { min-height: 60px; resize: vertical; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 0.4rem; background: #1d3b5c; color: white;
+    border: none; padding: 0.95rem 1.4rem;
+    border-radius: 0.9rem; font-size: 1rem; font-weight: 600;
+    cursor: pointer; width: 100%;
+    transition: background 0.15s, transform 0.05s;
+  }
+  .btn:active { transform: scale(0.98); background: #112b41; }
+  .btn-secondary { background: white; color: #1d3b5c; border: 1.5px solid #1d3b5c; }
+  .btn-secondary:active { background: #eef3fa; }
+  .btn-small { padding: 0.6rem 0.9rem; font-size: 0.85rem; width: auto; }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-top: 0.5rem; }
+  .btn-full { grid-column: 1 / -1; }
+
+  .field-create { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .field-create input[type="text"] { flex: 1; min-width: 140px; }
+  .field-create .color-input {
+    width: 50px; height: 50px; padding: 4px;
+    border-radius: 0.9rem; cursor: pointer;
+    border: 1.5px solid #dbe2ea; background: #fafbfe;
+    -webkit-appearance: none; appearance: none;
+  }
+  .field-create .color-input::-webkit-color-swatch-wrapper { padding: 0; }
+  .field-create .color-input::-webkit-color-swatch { border: none; border-radius: 0.6rem; }
+  .field-create .color-input::-moz-color-swatch { border: none; border-radius: 0.6rem; }
+  .field-create .btn { width: auto; padding: 0.9rem 1.1rem; }
+
+  .field-list { margin-top: 1rem; }
+  .field-item {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #f6f9fe; padding: 0.75rem 0.9rem;
+    border-radius: 0.8rem; margin-bottom: 0.5rem;
+    border-left: 5px solid #1d3b5c;
+  }
+  .field-item .left { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; min-width: 0; }
+  .field-item .name { font-weight: 600; word-break: break-word; display: flex; align-items: center; gap: 0.4rem; }
+  .field-item .meta { font-size: 0.75rem; color: #6d839b; }
+  .field-item .field-total {
+    font-weight: 700; color: #1d3b5c; font-size: 0.95rem;
+    white-space: nowrap; margin-left: 0.5rem;
+  }
+  .field-item .field-total.negative { color: #d14b4b; }
+  .field-item .actions { display: flex; gap: 0.4rem; align-items: center; margin-left: 0.5rem; }
+  .delete-btn {
+    background: #ffeaea; border: none; color: #d14b4b;
+    font-size: 0.9rem; width: 30px; height: 30px;
+    border-radius: 50%; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .edit-field-btn {
+    background: #e8f0fb; border: none; color: #1d3b5c;
+    font-size: 0.85rem; width: 30px; height: 30px;
+    border-radius: 50%; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+
+  .wallet-list { margin-top: 0.25rem; }
+  .wallet-item {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #eaf7ea; padding: 0.75rem 0.9rem;
+    border-radius: 0.8rem; margin-bottom: 0.5rem;
+    border-left: 4px solid #2d7a2d;
+  }
+  .wallet-item .wallet-info { flex: 1; min-width: 0; }
+  .wallet-item .wallet-name { font-weight: 600; color: #1e5a1e; word-break: break-word; }
+  .wallet-item .wallet-count { font-size: 0.75rem; color: #4d8a4d; }
+  .wallet-item .wallet-total { font-weight: 700; color: #2d7a2d; white-space: nowrap; margin-left: 0.5rem; font-size: 0.95rem; }
+  .wallet-item .wallet-total.negative { color: #d14b4b; }
+
+  .filter-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .filter-row select { padding: 0.65rem 0.85rem; font-size: 0.9rem; border-radius: 0.7rem; }
+
+  .transaction {
+    background: #f9fbfe; border-radius: 0.9rem;
+    padding: 0.9rem 1rem; margin-bottom: 0.6rem;
+    border: 1px solid #eef2f8;
+    display: flex; justify-content: space-between;
+    align-items: flex-start; gap: 0.6rem;
+    border-left: 4px solid #1d3b5c;
+  }
+  .transaction.editing { border: 2px solid #1d3b5c; background: #f0f6ff; }
+  .trans-info { flex: 1; min-width: 0; }
+  .trans-field {
+    display: inline-block; color: white;
+    font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.6rem;
+    border-radius: 1rem; margin-bottom: 0.35rem;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    background: #1d3b5c;
+  }
+  .trans-desc { font-weight: 500; word-break: break-word; margin-bottom: 0.2rem; }
+  .trans-wallet {
+    display: inline-block; background: #e8f5e8; color: #2d7a2d;
+    font-size: 0.75rem; padding: 0.15rem 0.6rem;
+    border-radius: 1rem; margin-bottom: 0.25rem;
+  }
+  .trans-date { font-size: 0.78rem; color: #6d839b; }
+  .trans-right { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
+  .trans-amount { font-weight: 700; color: #1d3b5c; font-size: 1.05rem; white-space: nowrap; }
+  .trans-amount.negative { color: #d14b4b; }
+
+  .edit-btn {
+    background: #e8f0fb; border: none; color: #1d3b5c;
+    font-size: 0.9rem; width: 30px; height: 30px;
+    border-radius: 50%; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+
+  .empty { text-align: center; color: #8a9cb0; padding: 1.5rem 1rem; font-size: 0.9rem; }
+  .error { color: #d14b4b; font-size: 0.85rem; margin-top: 0.5rem; min-height: 1.1rem; }
+
+  .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+  .section-head h2 { margin: 0; }
+
+  .backup-note { font-size: 0.8rem; color: #6d839b; text-align: center; margin-top: 0.75rem; line-height: 1.4; }
+  .hint { font-size: 0.75rem; color: #8a9cb0; margin-top: 0.3rem; font-style: italic; }
+
+  .editing-banner {
+    background: #fff8e1; border: 1px solid #f5c842;
+    padding: 0.6rem 0.9rem; border-radius: 0.7rem;
+    margin-bottom: 0.75rem; font-size: 0.85rem;
+    color: #7a5d00; display: flex;
+    justify-content: space-between; align-items: center;
+  }
+  .editing-banner button {
+    background: transparent; border: none;
+    color: #7a5d00; font-weight: 600;
+    cursor: pointer; font-size: 0.85rem;
+    text-decoration: underline;
+  }
+
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(10,37,64,0.6);
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem; z-index: 1000;
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal {
+    background: white; border-radius: 1.25rem;
+    padding: 1.5rem; max-width: 380px; width: 100%;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  }
+  .modal h3 { margin: 0 0 1rem; font-size: 1.1rem; }
+  .modal .color-grid {
+    display: grid; grid-template-columns: repeat(6, 1fr);
+    gap: 0.5rem; margin-bottom: 1rem;
+  }
+  .modal .color-swatch {
+    width: 100%; aspect-ratio: 1; border-radius: 0.6rem;
+    cursor: pointer; border: 2px solid transparent;
+    transition: transform 0.1s;
+  }
+  .modal .color-swatch:active { transform: scale(0.9); }
+  .modal .color-swatch.selected { border-color: #0a2540; box-shadow: 0 0 0 2px white inset; }
+  .modal .custom-color-row {
+    display: flex; gap: 0.5rem; align-items: center;
+    margin-bottom: 1rem;
+  }
+  .modal .custom-color-row label { font-size: 0.9rem; }
+  .modal .custom-color-row input[type="color"] {
+    width: 50px; height: 40px; padding: 3px;
+    border-radius: 0.6rem; border: 1.5px solid #dbe2ea;
+    cursor: pointer;
+  }
+  .modal .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>💰 Budget Manager</h1>
+
+  <div class="total-card">
+    <div class="total-label">Grand Total (all fields)</div>
+    <div class="total-amount" id="totalDisplay">$0.00</div>
+  </div>
+
+  <div class="breakdown-card">
+    <h3>📂 Field Totals</h3>
+    <div id="fieldTotalsBreakdown"></div>
+  </div>
+
+  <div class="card">
+    <h2>📂 Fields</h2>
+    <div class="field-create">
+      <input type="text" id="newField" placeholder="e.g. Food, Rent" maxlength="30">
+      <input type="color" id="newFieldColor" class="color-input" value="#1d3b5c" title="Field color">
+      <button class="btn btn-small" id="createFieldBtn">+ Add</button>
+    </div>
+    <div id="fieldList" class="field-list"></div>
+  </div>
+
+  <div class="card">
+    <h2>💼 Wallets (auto)</h2>
+    <div id="walletList" class="wallet-list">
+      <div class="empty">No wallets yet — add a "Wallet" value to an entry.</div>
+    </div>
+    <div class="hint">Wallets appear automatically from your entries.</div>
+  </div>
+
+  <div class="card">
+    <h2 id="formTitle">➕ Add Entry</h2>
+    <div id="editingBanner" class="editing-banner" style="display:none;">
+      <span>✏️ Editing entry...</span>
+      <button id="cancelEditBtn">Cancel</button>
+    </div>
+    <form id="entryForm">
+      <div class="input-group">
+        <label>Field <span class="optional">(optional)</span></label>
+        <select id="fieldSelect">
+          <option value="">— No field —</option>
+        </select>
+      </div>
+
+      <div class="input-group">
+        <label>Amount ($) <span class="optional">(optional, negatives OK)</span></label>
+        <input type="number" id="amount" step="0.01" placeholder="e.g. -50 or 100">
+        <div class="hint">Positive = income · Negative = expense</div>
+      </div>
+
+      <div class="input-group">
+        <label>Wallet / Where placed <span class="optional">(optional)</span></label>
+        <input type="text" id="wallet" placeholder="e.g. Cash, CBE, Telebirr" maxlength="40" list="walletSuggestions">
+        <datalist id="walletSuggestions"></datalist>
+      </div>
+
+      <div class="input-group">
+        <label>Description <span class="optional">(optional)</span></label>
+        <textarea id="desc" placeholder="What was this for?" maxlength="120"></textarea>
+      </div>
+
+      <div class="input-group">
+        <label>Date <span class="optional">(optional)</span></label>
+        <input type="date" id="date">
+      </div>
+
+      <button type="submit" class="btn" id="submitBtn">Add Entry</button>
+      <div class="error" id="formError"></div>
+      <div class="hint" style="text-align:center;margin-top:0.5rem;">
+        Every field is optional. Negative amounts are allowed.
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="section-head">
+      <h2>📋 Entries</h2>
+      <button class="btn btn-secondary btn-small" id="clearAllBtn">Clear All</button>
+    </div>
+
+    <div class="filter-row">
+      <select id="filterField">
+        <option value="">Filter: All fields</option>
+      </select>
+      <select id="filterWallet">
+        <option value="">Filter: All wallets</option>
+      </select>
+    </div>
+
+    <div id="transList"></div>
+  </div>
+
+  <div class="card">
+    <h2>📤 Export & Backup</h2>
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="exportCsvBtn">📤 Export CSV</button>
+      <button class="btn btn-secondary" id="backupBtn">⬇️ Backup</button>
+      <button class="btn btn-secondary btn-full" id="restoreBtn">⬆️ Restore Backup</button>
+    </div>
+    <input type="file" id="restoreFile" accept=".json" style="display:none">
+    <div class="backup-note">
+      <b>Export CSV</b> opens in Excel / Google Sheets.<br>
+      <b>Backup</b> saves everything (including colors). <b>Restore</b> loads it back.
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="colorModal">
+  <div class="modal">
+    <h3 id="colorModalTitle">Pick a color</h3>
+    <div class="color-grid" id="colorGrid"></div>
+    <div class="custom-color-row">
+      <label>Custom:</label>
+      <input type="color" id="customColorPick" value="#1d3b5c">
+      <span id="customColorHex" style="font-family:monospace;font-size:0.9rem;">#1d3b5c</span>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="colorCancelBtn">Cancel</button>
+      <button class="btn" id="colorSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const FIELDS_KEY = 'bm_fields_v5';
+  const ENTRIES_KEY = 'bm_entries_v5';
+  const COLOR_MAP_KEY = 'bm_field_colors_v5';
+
+  let fields = [];
+  let fieldColors = {};
+  let entries = [];
+  let editingId = null;
+
+  const PALETTE = [
+    '#1d3b5c', '#d14b4b', '#e67e22', '#f39c12', '#f1c40f', '#2ecc71',
+    '#27ae60', '#16a085', '#3498db', '#2980b9', '#9b59b6', '#8e44ad',
+    '#e84393', '#fd79a8', '#636e72', '#34495e', '#b33939', '#6f1e51'
+  ];
+
+  const $ = id => document.getElementById(id);
+  const totalDisplay = $('totalDisplay');
+  const newField = $('newField');
+  const newFieldColor = $('newFieldColor');
+  const createFieldBtn = $('createFieldBtn');
+  const fieldList = $('fieldList');
+  const walletList = $('walletList');
+  const fieldTotalsBreakdown = $('fieldTotalsBreakdown');
+  const fieldSelect = $('fieldSelect');
+  const entryForm = $('entryForm');
+  const amount = $('amount');
+  const wallet = $('wallet');
+  const walletSuggestions = $('walletSuggestions');
+  const desc = $('desc');
+  const date = $('date');
+  const formError = $('formError');
+  const formTitle = $('formTitle');
+  const submitBtn = $('submitBtn');
+  const editingBanner = $('editingBanner');
+  const cancelEditBtn = $('cancelEditBtn');
+  const transList = $('transList');
+  const clearAllBtn = $('clearAllBtn');
+  const exportCsvBtn = $('exportCsvBtn');
+  const backupBtn = $('backupBtn');
+  const restoreBtn = $('restoreBtn');
+  const restoreFile = $('restoreFile');
+  const filterField = $('filterField');
+  const filterWallet = $('filterWallet');
+
+  const colorModal = $('colorModal');
+  const colorModalTitle = $('colorModalTitle');
+  const colorGrid = $('colorGrid');
+  const customColorPick = $('customColorPick');
+  const customColorHex = $('customColorHex');
+  const colorCancelBtn = $('colorCancelBtn');
+  const colorSaveBtn = $('colorSaveBtn');
+
+  let modalTargetField = null;
+  let modalSelectedColor = '#1d3b5c';
+
+  function load() {
+    try {
+      const f = localStorage.getItem(FIELDS_KEY);
+      if (f) fields = JSON.parse(f);
+      const e = localStorage.getItem(ENTRIES_KEY);
+      if (e) entries = JSON.parse(e);
+      const c = localStorage.getItem(COLOR_MAP_KEY);
+      if (c) fieldColors = JSON.parse(c);
+      if (!Array.isArray(fields)) fields = [];
+      if (!Array.isArray(entries)) entries = [];
+      if (typeof fieldColors !== 'object' || fieldColors === null) fieldColors = {};
+    } catch (err) { fields = []; entries = []; fieldColors = {}; }
+  }
+  function saveFields() { try { localStorage.setItem(FIELDS_KEY, JSON.stringify(fields)); } catch(e){} }
+  function saveEntries() { try { localStorage.setItem(ENTRIES_KEY, JSON.stringify(entries)); } catch(e){} }
+  function saveColors() { try { localStorage.setItem(COLOR_MAP_KEY, JSON.stringify(fieldColors)); } catch(e){} }
+
+  function esc(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+  function fmtDate(d) {
+    if (!d) return null;
+    try {
+      const dt = new Date(d + 'T00:00:00');
+      if (isNaN(dt)) return d;
+      return dt.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
+    } catch { return d; }
+  }
+  function uid() { return Date.now() + '-' + Math.random().toString(36).slice(2, 9); }
+
+  // ✅ Updated money formatter — handles negatives cleanly: -$50.00
+  function money(n) {
+    const num = Number(n);
+    if (isNaN(num)) return '$0.00';
+    return (num < 0 ? '-$' : '$') + Math.abs(num).toFixed(2);
+  }
+
+  function colorFor(fieldName) {
+    if (!fieldName) return '#9aa9b9';
+    return fieldColors[fieldName] || '#1d3b5c';
+  }
+  function grandTotal() {
+    return entries.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  }
+  function fieldTotal(fieldName) {
+    return entries.filter(e => (e.fieldName || '') === fieldName)
+      .reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  }
+  function walletTotal(walletName) {
+    return entries.filter(e => (e.wallet || '') === walletName)
+      .reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  }
+  function discoverWallets() {
+    const set = new Set();
+    entries.forEach(e => { if (e.wallet) set.add(e.wallet); });
+    return Array.from(set).sort((a,b) => a.localeCompare(b));
+  }
+  function allFieldNames() {
+    const set = new Set(fields);
+    entries.forEach(e => { if (e.fieldName) set.add(e.fieldName); });
+    return Array.from(set);
+  }
+
+  function renderTotal() {
+    const total = grandTotal();
+    totalDisplay.textContent = money(total);
+    totalDisplay.classList.toggle('negative', total < 0);
+  }
+
+  function renderBreakdown() {
+    const allFields = allFieldNames();
+    if (allFields.length === 0) {
+      fieldTotalsBreakdown.innerHTML = '<div class="breakdown-empty">No fields yet.</div>';
+      return;
+    }
+    fieldTotalsBreakdown.innerHTML = allFields.map(f => {
+      const t = fieldTotal(f);
+      const col = colorFor(f);
+      return `<div class="breakdown-row">
+        <span class="label"><span class="color-dot" style="background:${col}"></span>${esc(f)}</span>
+        <span class="amt ${t < 0 ? 'negative' : ''}">${money(t)}</span>
+      </div>`;
+    }).join('');
+  }
+
+  function renderFields() {
+    const allFields = allFieldNames();
+    if (allFields.length === 0) {
+      fieldList.innerHTML = '<div class="empty">No fields yet — add one above 👆</div>';
+      return;
+    }
+    fieldList.innerHTML = allFields.map(f => {
+      const isUserField = fields.includes(f);
+      const count = entries.filter(e => e.fieldName === f).length;
+      const total = fieldTotal(f);
+      const col = colorFor(f);
+      return `<div class="field-item" style="border-left-color:${col}">
+        <div class="left">
+          <div class="name">📌 ${esc(f)}</div>
+          <div class="meta">${count} entr${count === 1 ? 'y' : 'ies'}</div>
+        </div>
+        <div class="field-total ${total < 0 ? 'negative' : ''}">${money(total)}</div>
+        <div class="actions">
+          ${isUserField ? `
+            <button class="edit-field-btn" data-color-field="${esc(f)}" title="Change color">🎨</button>
+            <button class="delete-btn" data-field="${esc(f)}" title="Delete field">✕</button>
+          ` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderWallets() {
+    const wallets = discoverWallets();
+    if (wallets.length === 0) {
+      walletList.innerHTML = '<div class="empty">No wallets yet — add a "Wallet" value to an entry.</div>';
+      return;
+    }
+    walletList.innerHTML = wallets.map(w => {
+      const count = entries.filter(e => e.wallet === w).length;
+      const total = walletTotal(w);
+      return `<div class="wallet-item">
+        <div class="wallet-info">
+          <div class="wallet-name">💼 ${esc(w)}</div>
+          <div class="wallet-count">${count} entr${count === 1 ? 'y' : 'ies'}</div>
+        </div>
+        <div class="wallet-total ${total < 0 ? 'negative' : ''}">${money(total)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderSelect() {
+    const cur = fieldSelect.value;
+    if (fields.length === 0) {
+      fieldSelect.innerHTML = '<option value="">— No field —</option>';
+    } else {
+      fieldSelect.innerHTML = '<option value="">— No field —</option>' +
+        fields.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
+      if (fields.includes(cur)) fieldSelect.value = cur;
+    }
+    const wallets = discoverWallets();
+    walletSuggestions.innerHTML = wallets.map(w => `<option value="${esc(w)}">`).join('');
+  }
+
+  function renderFilters() {
+    const allFields = allFieldNames();
+    const curFF = filterField.value;
+    filterField.innerHTML = '<option value="">Filter: All fields</option>' +
+      allFields.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
+    if (allFields.includes(curFF)) filterField.value = curFF;
+
+    const wallets = discoverWallets();
+    const curFW = filterWallet.value;
+    filterWallet.innerHTML = '<option value="">Filter: All wallets</option>' +
+      wallets.map(w => `<option value="${esc(w)}">${esc(w)}</option>`).join('');
+    if (wallets.includes(curFW)) filterWallet.value = curFW;
+  }
+
+  function renderTrans() {
+    let filtered = [...entries];
+    const ff = filterField.value;
+    const fw = filterWallet.value;
+    if (ff) filtered = filtered.filter(e => (e.fieldName || '') === ff);
+    if (fw) filtered = filtered.filter(e => (e.wallet || '') === fw);
+
+    if (filtered.length === 0) {
+      const active = ff || fw;
+      transList.innerHTML = `<div class="empty">${active ? 'No entries match this filter.' : 'No entries yet — add your first above 👆'}</div>`;
+      return;
+    }
+
+    const sorted = filtered.sort((a,b) => {
+      const da = a.date || '';
+      const db = b.date || '';
+      if (da === db) return 0;
+      return da < db ? 1 : -1;
+    });
+
+    transList.innerHTML = sorted.map(e => {
+      // ✅ Allow any valid number (0, negative, positive) as long as it's not empty
+      const amtRaw = e.amount;
+      const hasAmount = amtRaw !== '' && amtRaw !== null && amtRaw !== undefined && !isNaN(Number(amtRaw));
+      const amtNum = hasAmount ? Number(amtRaw) : 0;
+      const dateStr = fmtDate(e.date);
+      const isEditing = editingId === e.id;
+      const col = e.fieldName ? colorFor(e.fieldName) : '#9aa9b9';
+      return `<div class="transaction ${isEditing ? 'editing' : ''}" style="border-left-color:${col}">
+        <div class="trans-info">
+          ${e.fieldName ? `<span class="trans-field" style="background:${col}">${esc(e.fieldName)}</span>` : ''}
+          ${e.description ? `<div class="trans-desc">${esc(e.description)}</div>` : ''}
+          ${e.wallet ? `<span class="trans-wallet">💼 ${esc(e.wallet)}</span>` : ''}
+          ${dateStr ? `<div class="trans-date">📅 ${dateStr}</div>` : ''}
+          ${!e.fieldName && !e.description && !e.wallet && !dateStr && !hasAmount ? '<div class="trans-date">(empty entry)</div>' : ''}
+        </div>
+        <div class="trans-right">
+          ${hasAmount ? `<span class="trans-amount ${amtNum < 0 ? 'negative' : ''}">${money(amtNum)}</span>` : '<span class="trans-amount" style="color:#9aa9b9;font-weight:400;font-size:0.85rem;">—</span>'}
+          <button class="edit-btn" data-edit-id="${e.id}" title="Edit">✏️</button>
+          <button class="delete-btn" data-id="${e.id}" title="Delete">🗑️</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderAll() {
+    renderTotal();
+    renderBreakdown();
+    renderFields();
+    renderWallets();
+    renderSelect();
+    renderFilters();
+    renderTrans();
+  }
+
+  function createField(name, color) {
+    const n = name.trim();
+    if (!n) return alert('Please enter a field name.');
+    if (fields.some(f => f.toLowerCase() === n.toLowerCase())) return alert('That field already exists.');
+    fields.push(n);
+    fieldColors[n] = color || '#1d3b5c';
+    saveFields(); saveColors();
+    renderAll();
+    newField.value = '';
+    newFieldColor.value = '#1d3b5c';
+  }
+
+  function deleteField(name) {
+    if (!confirm(`Delete field "${name}" and ALL its entries?`)) return;
+    fields = fields.filter(f => f !== name);
+    entries = entries.filter(e => (e.fieldName || '') !== name);
+    delete fieldColors[name];
+    saveFields(); saveEntries(); saveColors();
+    if (editingId && !entries.find(e => e.id === editingId)) cancelEdit();
+    renderAll();
+  }
+
+  function deleteEntry(id) {
+    entries = entries.filter(e => e.id !== id);
+    saveEntries();
+    if (editingId === id) cancelEdit();
+    renderAll();
+  }
+
+  function startEdit(id) {
+    const e = entries.find(x => x.id === id);
+    if (!e) return;
+    editingId = id;
+    fieldSelect.value = e.fieldName || '';
+    amount.value = (e.amount === '' || e.amount === null || e.amount === undefined) ? '' : e.amount;
+    wallet.value = e.wallet || '';
+    desc.value = e.description || '';
+    date.value = e.date || '';
+    formTitle.textContent = '✏️ Edit Entry';
+    submitBtn.textContent = 'Save Changes';
+    editingBanner.style.display = 'flex';
+    formError.textContent = '';
+    document.getElementById('entryForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    renderTrans();
+  }
+
+  function cancelEdit() {
+    editingId = null;
+    fieldSelect.value = '';
+    amount.value = '';
+    wallet.value = '';
+    desc.value = '';
+    formTitle.textContent = '➕ Add Entry';
+    submitBtn.textContent = 'Add Entry';
+    editingBanner.style.display = 'none';
+    formError.textContent = '';
+    renderTrans();
+  }
+
+  function saveEntry() {
+    const fieldName = fieldSelect.value.trim();
+    const amtRaw = amount.value.trim();
+    const walletVal = wallet.value.trim();
+    const descVal = desc.value.trim();
+    const dateVal = date.value;
+
+    let amtNum = null;
+    if (amtRaw !== '') {
+      amtNum = parseFloat(amtRaw);
+      // ✅ Only check that it's a valid number — negatives and 0 are OK
+      if (isNaN(amtNum)) {
+        formError.textContent = 'Amount must be a valid number (e.g. -50 or 100).';
+        return;
+      }
+    }
+
+    const hasSomething = fieldName || amtRaw !== '' || walletVal || descVal || dateVal;
+    if (!hasSomething) {
+      formError.textContent = 'Add at least one thing (amount, wallet, description, or date).';
+      return;
+    }
+
+    if (editingId) {
+      const idx = entries.findIndex(x => x.id === editingId);
+      if (idx !== -1) {
+        entries[idx] = {
+          ...entries[idx],
+          fieldName: fieldName || '',
+          amount: amtNum !== null ? amtNum : '',
+          wallet: walletVal || '',
+          description: descVal || '',
+          date: dateVal || ''
+        };
+      }
+    } else {
+      entries.push({
+        id: uid(),
+        fieldName: fieldName || '',
+        amount: amtNum !== null ? amtNum : '',
+        wallet: walletVal || '',
+        description: descVal || '',
+        date: dateVal || ''
+      });
+    }
+
+    saveEntries();
+    formError.textContent = '';
+
+    if (editingId) {
+      cancelEdit();
+    } else {
+      amount.value = '';
+      wallet.value = '';
+      desc.value = '';
+      if (!date.value) date.value = new Date().toISOString().slice(0,10);
+    }
+    renderAll();
+  }
+
+  function openColorModal(fieldName) {
+    modalTargetField = fieldName;
+    modalSelectedColor = fieldColors[fieldName] || '#1d3b5c';
+    colorModalTitle.textContent = `Color for "${fieldName}"`;
+    renderColorGrid();
+    customColorPick.value = modalSelectedColor;
+    customColorHex.textContent = modalSelectedColor;
+    colorModal.classList.remove('hidden');
+  }
+  function renderColorGrid() {
+    colorGrid.innerHTML = PALETTE.map(c => {
+      const sel = c.toLowerCase() === modalSelectedColor.toLowerCase() ? 'selected' : '';
+      return `<div class="color-swatch ${sel}" style="background:${c}" data-color="${c}"></div>`;
+    }).join('');
+  }
+  function closeColorModal() {
+    colorModal.classList.add('hidden');
+    modalTargetField = null;
+  }
+  function saveColorModal() {
+    if (!modalTargetField) return;
+    fieldColors[modalTargetField] = modalSelectedColor;
+    saveColors();
+    closeColorModal();
+    renderAll();
+  }
+
+  function csvEscape(v) {
+    const s = String(v == null ? '' : v);
+    if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+  function exportCSV() {
+    if (entries.length === 0) {
+      alert('No entries to export.');
+      return;
+    }
+    const headers = ['Date', 'Field', 'Amount', 'Wallet', 'Description'];
+    const rows = [headers.map(csvEscape).join(',')];
+
+    const sorted = [...entries].sort((a,b) => {
+      const da = a.date || '';
+      const db = b.date || '';
+      if (da === db) return 0;
+      return da < db ? 1 : -1;
+    });
+
+    sorted.forEach(e => {
+      rows.push([
+        e.date || '',
+        e.fieldName || '',
+        (e.amount !== '' && e.amount !== null && e.amount !== undefined) ? Number(e.amount).toFixed(2) : '',
+        e.wallet || '',
+        e.description || ''
+      ].map(csvEscape).join(','));
+    });
+
+    rows.push('');
+    rows.push(['--- SUMMARY ---'].map(csvEscape).join(','));
+    rows.push(['Grand Total', '', grandTotal().toFixed(2)].map(csvEscape).join(','));
+    rows.push('');
+    rows.push(['Field Totals'].map(csvEscape).join(','));
+    allFieldNames().forEach(f => {
+      rows.push([f, '', fieldTotal(f).toFixed(2)].map(csvEscape).join(','));
+    });
+    rows.push('');
+    rows.push(['Wallet Totals'].map(csvEscape).join(','));
+    discoverWallets().forEach(w => {
+      rows.push([w, '', walletTotal(w).toFixed(2)].map(csvEscape).join(','));
+    });
+
+    const csv = '\uFEFF' + rows.join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'budget-export-' + new Date().toISOString().slice(0,10) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function backup() {
+    const data = {
+      fields, entries, fieldColors,
+      exported: new Date().toISOString(), version: 9
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'budget-backup-' + new Date().toISOString().slice(0,10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function restore(file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (!Array.isArray(data.fields) || !Array.isArray(data.entries)) {
+          throw new Error('Invalid backup file');
+        }
+        if (!confirm('This will REPLACE all current fields and entries. Continue?')) return;
+        fields = data.fields;
+        entries = data.entries;
+        fieldColors = data.fieldColors && typeof data.fieldColors === 'object' ? data.fieldColors : {};
+        saveFields(); saveEntries(); saveColors();
+        cancelEdit();
+        renderAll();
+        alert('✅ Restored successfully!');
+      } catch (err) {
+        alert('❌ Could not restore: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  createFieldBtn.addEventListener('click', () => {
+    createField(newField.value, newFieldColor.value);
+  });
+  newField.addEventListener('keypress', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      createField(newField.value, newFieldColor.value);
+    }
+  });
+
+  fieldList.addEventListener('click', e => {
+    const delBtn = e.target.closest('.delete-btn[data-field]');
+    if (delBtn) { deleteField(delBtn.dataset.field); return; }
+    const colorBtn = e.target.closest('.edit-field-btn[data-color-field]');
+    if (colorBtn) { openColorModal(colorBtn.dataset.colorField); return; }
+  });
+
+  entryForm.addEventListener('submit', e => {
+    e.preventDefault();
+    saveEntry();
+  });
+
+  transList.addEventListener('click', e => {
+    const delBtn = e.target.closest('.delete-btn[data-id]');
+    if (delBtn) { deleteEntry(delBtn.dataset.id); return; }
+    const editBtn = e.target.closest('.edit-btn[data-edit-id]');
+    if (editBtn) { startEdit(editBtn.dataset.editId); return; }
+  });
+
+  cancelEditBtn.addEventListener('click', cancelEdit);
+  filterField.addEventListener('change', renderTrans);
+  filterWallet.addEventListener('change', renderTrans);
+
+  clearAllBtn.addEventListener('click', () => {
+    if (entries.length === 0) return;
+    if (!confirm('Delete ALL entries? (Fields stay.)')) return;
+    entries = [];
+    saveEntries();
+    cancelEdit();
+    renderAll();
+  });
+
+  exportCsvBtn.addEventListener('click', exportCSV);
+  backupBtn.addEventListener('click', backup);
+  restoreBtn.addEventListener('click', () => restoreFile.click());
+  restoreFile.addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (f) restore(f);
+    e.target.value = '';
+  });
+
+  colorGrid.addEventListener('click', e => {
+    const sw = e.target.closest('.color-swatch');
+    if (!sw) return;
+    modalSelectedColor = sw.dataset.color;
+    customColorPick.value = modalSelectedColor;
+    customColorHex.textContent = modalSelectedColor;
+    renderColorGrid();
+  });
+  customColorPick.addEventListener('input', () => {
+    modalSelectedColor = customColorPick.value;
+    customColorHex.textContent = modalSelectedColor;
+    renderColorGrid();
+  });
+  colorCancelBtn.addEventListener('click', closeColorModal);
+  colorSaveBtn.addEventListener('click', saveColorModal);
+  colorModal.addEventListener('click', e => {
+    if (e.target === colorModal) closeColorModal();
+  });
+
+  load();
+  date.value = new Date().toISOString().slice(0,10);
+  renderAll();
+})();
+</script>
+</body>
+</html>
