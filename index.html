@@ -895,5 +895,10 @@
   // Initialize date
   date.value = new Date().toISOString().slice(0,10);
 </script>
+    <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js');
+  }
+</script>
 </body>
 </html>
