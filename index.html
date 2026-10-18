@@ -16,6 +16,14 @@
   .container { max-width: 600px; margin: 0 auto; padding: 1rem; }
   h1 { font-size: 1.5rem; margin: 0.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem; }
 
+  /* Auth Screen */
+  .auth-container { max-width: 400px; margin: 4rem auto; padding: 2rem; background: white; border-radius: 1.25rem; box-shadow: 0 8px 24px rgba(10,37,64,0.1); }
+  .auth-container h1 { justify-content: center; margin-bottom: 0.5rem; }
+  .auth-subtitle { text-align: center; color: #6d839b; margin-bottom: 1.5rem; font-size: 0.95rem; }
+  .auth-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; background: #f0f4fa; padding: 0.35rem; border-radius: 0.9rem; }
+  .auth-tab { flex: 1; padding: 0.6rem; text-align: center; border-radius: 0.6rem; cursor: pointer; font-weight: 600; color: #6d839b; transition: 0.2s; }
+  .auth-tab.active { background: white; color: #1d3b5c; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+  
   .total-card {
     background: linear-gradient(135deg, #0a2540, #1d3b5c);
     color: white; padding: 1.5rem; border-radius: 1.25rem;
@@ -55,7 +63,7 @@
     padding: 1.25rem; margin-bottom: 1rem;
     box-shadow: 0 2px 8px rgba(10,37,64,0.06);
   }
-  .card h2 { font-size: 1.1rem; margin: 0 0 1rem; display: flex; align-items: center; gap: 0.4rem; }
+  .card h2 { font-size: 1.1rem; margin: 0 0 1rem; display: flex; align-items: center; gap: 0.4rem; justify-content: space-between; }
 
   input, select, textarea, button { font-family: inherit; font-size: 16px; }
   .input-group { margin-bottom: 0.9rem; }
@@ -65,7 +73,7 @@
     text-transform: uppercase; letter-spacing: 0.5px;
   }
   .input-group label .optional { color: #9aa9b9; font-weight: 400; text-transform: none; letter-spacing: 0; }
-  input[type="text"], input[type="number"], input[type="date"], select, textarea {
+  input[type="text"], input[type="number"], input[type="date"], input[type="email"], input[type="password"], select, textarea {
     width: 100%; padding: 0.9rem 1rem;
     border: 1.5px solid #dbe2ea; border-radius: 0.9rem;
     background: #fafbfe; outline: none;
@@ -87,6 +95,7 @@
   .btn-secondary { background: white; color: #1d3b5c; border: 1.5px solid #1d3b5c; }
   .btn-secondary:active { background: #eef3fa; }
   .btn-small { padding: 0.6rem 0.9rem; font-size: 0.85rem; width: auto; }
+  .btn-danger { background: #d14b4b; color: white; }
   .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-top: 0.5rem; }
   .btn-full { grid-column: 1 / -1; }
 
@@ -243,11 +252,49 @@
     cursor: pointer;
   }
   .modal .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+
+  /* Utility */
+  .hidden { display: none !important; }
+  .loading-screen { text-align: center; padding: 3rem 1rem; color: #6d839b; }
 </style>
 </head>
 <body>
-<div class="container">
+
+<!-- LOADING SCREEN -->
+<div id="loadingScreen" class="loading-screen">
+  <h2>Connecting to Cloud... ☁️</h2>
+</div>
+
+<!-- AUTH SCREEN -->
+<div id="authScreen" class="auth-container hidden">
   <h1>💰 Budget Manager</h1>
+  <p class="auth-subtitle">Log in to sync your data across devices.</p>
+  
+  <div class="auth-tabs">
+    <div class="auth-tab active" id="tabLogin">Log In</div>
+    <div class="auth-tab" id="tabSignup">Sign Up</div>
+  </div>
+
+  <form id="authForm">
+    <div class="input-group">
+      <label>Email</label>
+      <input type="email" id="authEmail" placeholder="you@example.com" required>
+    </div>
+    <div class="input-group">
+      <label>Password</label>
+      <input type="password" id="authPassword" placeholder="Min 6 characters" required>
+    </div>
+    <button type="submit" class="btn" id="authSubmitBtn">Log In</button>
+    <div class="error" id="authError" style="text-align:center;"></div>
+  </form>
+</div>
+
+<!-- MAIN APP SCREEN -->
+<div id="appScreen" class="container hidden">
+  <h1 style="justify-content: space-between;">
+    <span>💰 Budget Manager</span>
+    <button class="btn btn-secondary btn-small" id="logoutBtn">Log Out</button>
+  </h1>
 
   <div class="total-card">
     <div class="total-label">Grand Total (all fields)</div>
@@ -316,7 +363,7 @@
       <button type="submit" class="btn" id="submitBtn">Add Entry</button>
       <div class="error" id="formError"></div>
       <div class="hint" style="text-align:center;margin-top:0.5rem;">
-        Every field is optional. Negative amounts are allowed.
+        Every field is optional.
       </div>
     </form>
   </div>
@@ -348,8 +395,7 @@
     </div>
     <input type="file" id="restoreFile" accept=".json" style="display:none">
     <div class="backup-note">
-      <b>Export CSV</b> opens in Excel / Google Sheets.<br>
-      <b>Backup</b> saves everything (including colors). <b>Restore</b> loads it back.
+      Your data is synced to the cloud automatically. Use backup for offline safety.
     </div>
   </div>
 </div>
@@ -370,22 +416,59 @@
   </div>
 </div>
 
-<script>
-(function() {
-  const FIELDS_KEY = 'bm_fields_v5';
-  const ENTRIES_KEY = 'bm_entries_v5';
-  const COLOR_MAP_KEY = 'bm_field_colors_v5';
+<!-- FIREBASE SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+  // ==========================================
+  // ⚠️ REPLACE THIS WITH YOUR FIREBASE CONFIG ⚠️
+  // ==========================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyDd30YzkHGihbrVCftPdJ_s7D0NGEBjQ20",
+  authDomain: "budget-app-6134c.firebaseapp.com",
+  projectId: "budget-app-6134c",
+  storageBucket: "budget-app-6134c.firebasestorage.app",
+  messagingSenderId: "578038046340",
+  appId: "1:578038046340:web:bc4ff85ed238e7344c2cd1"
+  };
+
+  let app, auth, db;
+  let currentUser = null;
+
+  // Check if config is filled
+  if (firebaseConfig.apiKey === "PASTE_YOUR_API_KEY_HERE") {
+    document.getElementById('loadingScreen').innerHTML = '<h2 style="color:red;">⚠️ Setup Required</h2><p>Please edit the code and replace the firebaseConfig with your actual keys.</p>';
+  } else {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+  }
+
+  // ---- UI Elements ----
+  const loadingScreen = document.getElementById('loadingScreen');
+  const authScreen = document.getElementById('authScreen');
+  const appScreen = document.getElementById('appScreen');
+  
+  const tabLogin = document.getElementById('tabLogin');
+  const tabSignup = document.getElementById('tabSignup');
+  const authForm = document.getElementById('authForm');
+  const authEmail = document.getElementById('authEmail');
+  const authPassword = document.getElementById('authPassword');
+  const authSubmitBtn = document.getElementById('authSubmitBtn');
+  const authError = document.getElementById('authError');
+  const logoutBtn = document.getElementById('logoutBtn');
+
+  let isLoginMode = true;
+
+  // ---- App State ----
   let fields = [];
   let fieldColors = {};
   let entries = [];
   let editingId = null;
 
-  const PALETTE = [
-    '#1d3b5c', '#d14b4b', '#e67e22', '#f39c12', '#f1c40f', '#2ecc71',
-    '#27ae60', '#16a085', '#3498db', '#2980b9', '#9b59b6', '#8e44ad',
-    '#e84393', '#fd79a8', '#636e72', '#34495e', '#b33939', '#6f1e51'
-  ];
+  const PALETTE = ['#1d3b5c', '#d14b4b', '#e67e22', '#f39c12', '#f1c40f', '#2ecc71', '#27ae60', '#16a085', '#3498db', '#2980b9', '#9b59b6', '#8e44ad', '#e84393', '#fd79a8', '#636e72', '#34495e', '#b33939', '#6f1e51'];
 
   const $ = id => document.getElementById(id);
   const totalDisplay = $('totalDisplay');
@@ -427,27 +510,132 @@
   let modalTargetField = null;
   let modalSelectedColor = '#1d3b5c';
 
-  function load() {
+  // ==========================================
+  // AUTHENTICATION LOGIC
+  // ==========================================
+  
+  tabLogin.addEventListener('click', () => {
+    isLoginMode = true;
+    tabLogin.classList.add('active');
+    tabSignup.classList.remove('active');
+    authSubmitBtn.textContent = 'Log In';
+    authError.textContent = '';
+  });
+
+  tabSignup.addEventListener('click', () => {
+    isLoginMode = false;
+    tabSignup.classList.add('active');
+    tabLogin.classList.remove('active');
+    authSubmitBtn.textContent = 'Create Account';
+    authError.textContent = '';
+  });
+
+  authForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    authError.textContent = '';
+    authSubmitBtn.textContent = 'Please wait...';
+    
+    const email = authEmail.value;
+    const password = authPassword.value;
+
     try {
-      const f = localStorage.getItem(FIELDS_KEY);
-      if (f) fields = JSON.parse(f);
-      const e = localStorage.getItem(ENTRIES_KEY);
-      if (e) entries = JSON.parse(e);
-      const c = localStorage.getItem(COLOR_MAP_KEY);
-      if (c) fieldColors = JSON.parse(c);
-      if (!Array.isArray(fields)) fields = [];
-      if (!Array.isArray(entries)) entries = [];
-      if (typeof fieldColors !== 'object' || fieldColors === null) fieldColors = {};
-    } catch (err) { fields = []; entries = []; fieldColors = {}; }
+      if (isLoginMode) {
+        await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        await createUserWithEmailAndPassword(auth, email, password);
+      }
+    } catch (err) {
+      authError.textContent = err.message.replace('Firebase: ', '');
+      authSubmitBtn.textContent = isLoginMode ? 'Log In' : 'Create Account';
+    }
+  });
+
+  logoutBtn.addEventListener('click', () => {
+    signOut(auth);
+  });
+
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      currentUser = user;
+      authScreen.classList.add('hidden');
+      appScreen.classList.remove('hidden');
+      await loadDataFromCloud();
+    } else {
+      currentUser = null;
+      appScreen.classList.add('hidden');
+      authScreen.classList.remove('hidden');
+      loadingScreen.classList.add('hidden');
+      authSubmitBtn.textContent = isLoginMode ? 'Log In' : 'Create Account';
+      // Clear local data state
+      fields = []; entries = []; fieldColors = {};
+    }
+  });
+
+  // ==========================================
+  // CLOUD SYNC LOGIC
+  // ==========================================
+
+  async function saveToCloud() {
+    if (!currentUser) return;
+    try {
+      await setDoc(doc(db, "users", currentUser.uid), {
+        fields, entries, fieldColors,
+        lastUpdated: new Date().toISOString()
+      });
+    } catch (e) {
+      console.error("Error saving to cloud: ", e);
+    }
   }
-  function saveFields() { try { localStorage.setItem(FIELDS_KEY, JSON.stringify(fields)); } catch(e){} }
-  function saveEntries() { try { localStorage.setItem(ENTRIES_KEY, JSON.stringify(entries)); } catch(e){} }
-  function saveColors() { try { localStorage.setItem(COLOR_MAP_KEY, JSON.stringify(fieldColors)); } catch(e){} }
+
+  async function loadDataFromCloud() {
+    try {
+      const docRef = doc(db, "users", currentUser.uid);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        fields = data.fields || [];
+        entries = data.entries || [];
+        fieldColors = data.fieldColors || {};
+      } else {
+        // Brand new user: check if they have local data to push
+        const localF = localStorage.getItem('bm_fields_v5');
+        if (localF) {
+          fields = JSON.parse(localF) || [];
+          fieldColors = JSON.parse(localStorage.getItem('bm_field_colors_v5')) || {};
+          entries = JSON.parse(localStorage.getItem('bm_entries_v5')) || [];
+          await saveToCloud(); // Push local to cloud
+          alert("Existing local data found and synced to your new cloud account!");
+        }
+      }
+      
+      // Update local storage cache just in case
+      localStorage.setItem('bm_fields_v5', JSON.stringify(fields));
+      localStorage.setItem('bm_entries_v5', JSON.stringify(entries));
+      localStorage.setItem('bm_field_colors_v5', JSON.stringify(fieldColors));
+
+      loadingScreen.classList.add('hidden');
+      renderAll();
+    } catch (e) {
+      console.error("Error loading from cloud:", e);
+      alert("Failed to load data from cloud. Check your internet.");
+    }
+  }
+
+  // Save data locally AND to the cloud whenever changes are made
+  function saveData() {
+    localStorage.setItem('bm_fields_v5', JSON.stringify(fields));
+    localStorage.setItem('bm_entries_v5', JSON.stringify(entries));
+    localStorage.setItem('bm_field_colors_v5', JSON.stringify(fieldColors));
+    saveToCloud();
+  }
+
+  // ==========================================
+  // EXISTING APP LOGIC (UPDATED FOR CLOUD)
+  // ==========================================
 
   function esc(s) {
-    return String(s || '').replace(/[&<>"']/g, c => ({
-      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-    }[c]));
+    return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
   function fmtDate(d) {
     if (!d) return null;
@@ -458,29 +646,15 @@
     } catch { return d; }
   }
   function uid() { return Date.now() + '-' + Math.random().toString(36).slice(2, 9); }
-
-  // ✅ Updated money formatter — handles negatives cleanly: -$50.00
   function money(n) {
     const num = Number(n);
     if (isNaN(num)) return '$0.00';
     return (num < 0 ? '-$' : '$') + Math.abs(num).toFixed(2);
   }
-
-  function colorFor(fieldName) {
-    if (!fieldName) return '#9aa9b9';
-    return fieldColors[fieldName] || '#1d3b5c';
-  }
-  function grandTotal() {
-    return entries.reduce((s, e) => s + (Number(e.amount) || 0), 0);
-  }
-  function fieldTotal(fieldName) {
-    return entries.filter(e => (e.fieldName || '') === fieldName)
-      .reduce((s, e) => s + (Number(e.amount) || 0), 0);
-  }
-  function walletTotal(walletName) {
-    return entries.filter(e => (e.wallet || '') === walletName)
-      .reduce((s, e) => s + (Number(e.amount) || 0), 0);
-  }
+  function colorFor(fieldName) { return fieldName ? (fieldColors[fieldName] || '#1d3b5c') : '#9aa9b9'; }
+  function grandTotal() { return entries.reduce((s, e) => s + (Number(e.amount) || 0), 0); }
+  function fieldTotal(fieldName) { return entries.filter(e => (e.fieldName || '') === fieldName).reduce((s, e) => s + (Number(e.amount) || 0), 0); }
+  function walletTotal(walletName) { return entries.filter(e => (e.wallet || '') === walletName).reduce((s, e) => s + (Number(e.amount) || 0), 0); }
   function discoverWallets() {
     const set = new Set();
     entries.forEach(e => { if (e.wallet) set.add(e.wallet); });
@@ -500,121 +674,71 @@
 
   function renderBreakdown() {
     const allFields = allFieldNames();
-    if (allFields.length === 0) {
-      fieldTotalsBreakdown.innerHTML = '<div class="breakdown-empty">No fields yet.</div>';
-      return;
-    }
+    if (allFields.length === 0) { fieldTotalsBreakdown.innerHTML = '<div class="breakdown-empty">No fields yet.</div>'; return; }
     fieldTotalsBreakdown.innerHTML = allFields.map(f => {
-      const t = fieldTotal(f);
-      const col = colorFor(f);
-      return `<div class="breakdown-row">
-        <span class="label"><span class="color-dot" style="background:${col}"></span>${esc(f)}</span>
-        <span class="amt ${t < 0 ? 'negative' : ''}">${money(t)}</span>
-      </div>`;
+      const t = fieldTotal(f), col = colorFor(f);
+      return `<div class="breakdown-row"><span class="label"><span class="color-dot" style="background:${col}"></span>${esc(f)}</span><span class="amt ${t < 0 ? 'negative' : ''}">${money(t)}</span></div>`;
     }).join('');
   }
 
   function renderFields() {
     const allFields = allFieldNames();
-    if (allFields.length === 0) {
-      fieldList.innerHTML = '<div class="empty">No fields yet — add one above 👆</div>';
-      return;
-    }
+    if (allFields.length === 0) { fieldList.innerHTML = '<div class="empty">No fields yet — add one above 👆</div>'; return; }
     fieldList.innerHTML = allFields.map(f => {
       const isUserField = fields.includes(f);
       const count = entries.filter(e => e.fieldName === f).length;
-      const total = fieldTotal(f);
-      const col = colorFor(f);
+      const total = fieldTotal(f), col = colorFor(f);
       return `<div class="field-item" style="border-left-color:${col}">
-        <div class="left">
-          <div class="name">📌 ${esc(f)}</div>
-          <div class="meta">${count} entr${count === 1 ? 'y' : 'ies'}</div>
-        </div>
+        <div class="left"><div class="name">📌 ${esc(f)}</div><div class="meta">${count} entr${count === 1 ? 'y' : 'ies'}</div></div>
         <div class="field-total ${total < 0 ? 'negative' : ''}">${money(total)}</div>
-        <div class="actions">
-          ${isUserField ? `
-            <button class="edit-field-btn" data-color-field="${esc(f)}" title="Change color">🎨</button>
-            <button class="delete-btn" data-field="${esc(f)}" title="Delete field">✕</button>
-          ` : ''}
-        </div>
+        <div class="actions">${isUserField ? `<button class="edit-field-btn" data-color-field="${esc(f)}" title="Change color">🎨</button><button class="delete-btn" data-field="${esc(f)}" title="Delete field">✕</button>` : ''}</div>
       </div>`;
     }).join('');
   }
 
   function renderWallets() {
     const wallets = discoverWallets();
-    if (wallets.length === 0) {
-      walletList.innerHTML = '<div class="empty">No wallets yet — add a "Wallet" value to an entry.</div>';
-      return;
-    }
+    if (wallets.length === 0) { walletList.innerHTML = '<div class="empty">No wallets yet — add a "Wallet" value to an entry.</div>'; return; }
     walletList.innerHTML = wallets.map(w => {
-      const count = entries.filter(e => e.wallet === w).length;
-      const total = walletTotal(w);
-      return `<div class="wallet-item">
-        <div class="wallet-info">
-          <div class="wallet-name">💼 ${esc(w)}</div>
-          <div class="wallet-count">${count} entr${count === 1 ? 'y' : 'ies'}</div>
-        </div>
-        <div class="wallet-total ${total < 0 ? 'negative' : ''}">${money(total)}</div>
-      </div>`;
+      const count = entries.filter(e => e.wallet === w).length, total = walletTotal(w);
+      return `<div class="wallet-item"><div class="wallet-info"><div class="wallet-name">💼 ${esc(w)}</div><div class="wallet-count">${count} entr${count === 1 ? 'y' : 'ies'}</div></div><div class="wallet-total ${total < 0 ? 'negative' : ''}">${money(total)}</div></div>`;
     }).join('');
   }
 
   function renderSelect() {
     const cur = fieldSelect.value;
-    if (fields.length === 0) {
-      fieldSelect.innerHTML = '<option value="">— No field —</option>';
-    } else {
-      fieldSelect.innerHTML = '<option value="">— No field —</option>' +
-        fields.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
-      if (fields.includes(cur)) fieldSelect.value = cur;
-    }
-    const wallets = discoverWallets();
-    walletSuggestions.innerHTML = wallets.map(w => `<option value="${esc(w)}">`).join('');
+    fieldSelect.innerHTML = '<option value="">— No field —</option>' + fields.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
+    if (fields.includes(cur)) fieldSelect.value = cur;
+    walletSuggestions.innerHTML = discoverWallets().map(w => `<option value="${esc(w)}">`).join('');
   }
 
   function renderFilters() {
     const allFields = allFieldNames();
     const curFF = filterField.value;
-    filterField.innerHTML = '<option value="">Filter: All fields</option>' +
-      allFields.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
+    filterField.innerHTML = '<option value="">Filter: All fields</option>' + allFields.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
     if (allFields.includes(curFF)) filterField.value = curFF;
 
     const wallets = discoverWallets();
     const curFW = filterWallet.value;
-    filterWallet.innerHTML = '<option value="">Filter: All wallets</option>' +
-      wallets.map(w => `<option value="${esc(w)}">${esc(w)}</option>`).join('');
+    filterWallet.innerHTML = '<option value="">Filter: All wallets</option>' + wallets.map(w => `<option value="${esc(w)}">${esc(w)}</option>`).join('');
     if (wallets.includes(curFW)) filterWallet.value = curFW;
   }
 
   function renderTrans() {
     let filtered = [...entries];
-    const ff = filterField.value;
-    const fw = filterWallet.value;
-    if (ff) filtered = filtered.filter(e => (e.fieldName || '') === ff);
-    if (fw) filtered = filtered.filter(e => (e.wallet || '') === fw);
+    if (filterField.value) filtered = filtered.filter(e => (e.fieldName || '') === filterField.value);
+    if (filterWallet.value) filtered = filtered.filter(e => (e.wallet || '') === filterWallet.value);
 
     if (filtered.length === 0) {
-      const active = ff || fw;
+      const active = filterField.value || filterWallet.value;
       transList.innerHTML = `<div class="empty">${active ? 'No entries match this filter.' : 'No entries yet — add your first above 👆'}</div>`;
       return;
     }
 
-    const sorted = filtered.sort((a,b) => {
-      const da = a.date || '';
-      const db = b.date || '';
-      if (da === db) return 0;
-      return da < db ? 1 : -1;
-    });
-
+    const sorted = filtered.sort((a,b) => { const da = a.date || '', db = b.date || ''; return da === db ? 0 : (da < db ? 1 : -1); });
     transList.innerHTML = sorted.map(e => {
-      // ✅ Allow any valid number (0, negative, positive) as long as it's not empty
-      const amtRaw = e.amount;
-      const hasAmount = amtRaw !== '' && amtRaw !== null && amtRaw !== undefined && !isNaN(Number(amtRaw));
-      const amtNum = hasAmount ? Number(amtRaw) : 0;
-      const dateStr = fmtDate(e.date);
-      const isEditing = editingId === e.id;
-      const col = e.fieldName ? colorFor(e.fieldName) : '#9aa9b9';
+      const amtRaw = e.amount, hasAmount = amtRaw !== '' && amtRaw !== null && amtRaw !== undefined && !isNaN(Number(amtRaw));
+      const amtNum = hasAmount ? Number(amtRaw) : 0, dateStr = fmtDate(e.date), isEditing = editingId === e.id, col = e.fieldName ? colorFor(e.fieldName) : '#9aa9b9';
       return `<div class="transaction ${isEditing ? 'editing' : ''}" style="border-left-color:${col}">
         <div class="trans-info">
           ${e.fieldName ? `<span class="trans-field" style="background:${col}">${esc(e.fieldName)}</span>` : ''}
@@ -632,26 +756,15 @@
     }).join('');
   }
 
-  function renderAll() {
-    renderTotal();
-    renderBreakdown();
-    renderFields();
-    renderWallets();
-    renderSelect();
-    renderFilters();
-    renderTrans();
-  }
+  function renderAll() { renderTotal(); renderBreakdown(); renderFields(); renderWallets(); renderSelect(); renderFilters(); renderTrans(); }
 
+  // Actions
   function createField(name, color) {
     const n = name.trim();
     if (!n) return alert('Please enter a field name.');
     if (fields.some(f => f.toLowerCase() === n.toLowerCase())) return alert('That field already exists.');
-    fields.push(n);
-    fieldColors[n] = color || '#1d3b5c';
-    saveFields(); saveColors();
-    renderAll();
-    newField.value = '';
-    newFieldColor.value = '#1d3b5c';
+    fields.push(n); fieldColors[n] = color || '#1d3b5c';
+    saveData(); renderAll(); newField.value = ''; newFieldColor.value = '#1d3b5c';
   }
 
   function deleteField(name) {
@@ -659,14 +772,14 @@
     fields = fields.filter(f => f !== name);
     entries = entries.filter(e => (e.fieldName || '') !== name);
     delete fieldColors[name];
-    saveFields(); saveEntries(); saveColors();
+    saveData();
     if (editingId && !entries.find(e => e.id === editingId)) cancelEdit();
     renderAll();
   }
 
   function deleteEntry(id) {
     entries = entries.filter(e => e.id !== id);
-    saveEntries();
+    saveData();
     if (editingId === id) cancelEdit();
     renderAll();
   }
@@ -674,190 +787,67 @@
   function startEdit(id) {
     const e = entries.find(x => x.id === id);
     if (!e) return;
-    editingId = id;
-    fieldSelect.value = e.fieldName || '';
-    amount.value = (e.amount === '' || e.amount === null || e.amount === undefined) ? '' : e.amount;
-    wallet.value = e.wallet || '';
-    desc.value = e.description || '';
-    date.value = e.date || '';
-    formTitle.textContent = '✏️ Edit Entry';
-    submitBtn.textContent = 'Save Changes';
-    editingBanner.style.display = 'flex';
-    formError.textContent = '';
-    document.getElementById('entryForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    renderTrans();
+    editingId = id; fieldSelect.value = e.fieldName || ''; amount.value = (e.amount === '' || e.amount === null) ? '' : e.amount;
+    wallet.value = e.wallet || ''; desc.value = e.description || ''; date.value = e.date || '';
+    formTitle.textContent = '✏️ Edit Entry'; submitBtn.textContent = 'Save Changes';
+    editingBanner.style.display = 'flex'; formError.textContent = '';
+    $('entryForm').scrollIntoView({ behavior: 'smooth', block: 'center' }); renderTrans();
   }
 
   function cancelEdit() {
-    editingId = null;
-    fieldSelect.value = '';
-    amount.value = '';
-    wallet.value = '';
-    desc.value = '';
-    formTitle.textContent = '➕ Add Entry';
-    submitBtn.textContent = 'Add Entry';
-    editingBanner.style.display = 'none';
-    formError.textContent = '';
-    renderTrans();
+    editingId = null; fieldSelect.value = ''; amount.value = ''; wallet.value = ''; desc.value = '';
+    formTitle.textContent = '➕ Add Entry'; submitBtn.textContent = 'Add Entry';
+    editingBanner.style.display = 'none'; formError.textContent = ''; renderTrans();
   }
 
   function saveEntry() {
-    const fieldName = fieldSelect.value.trim();
-    const amtRaw = amount.value.trim();
-    const walletVal = wallet.value.trim();
-    const descVal = desc.value.trim();
-    const dateVal = date.value;
-
+    const fieldName = fieldSelect.value.trim(), amtRaw = amount.value.trim(), walletVal = wallet.value.trim(), descVal = desc.value.trim(), dateVal = date.value;
     let amtNum = null;
-    if (amtRaw !== '') {
-      amtNum = parseFloat(amtRaw);
-      // ✅ Only check that it's a valid number — negatives and 0 are OK
-      if (isNaN(amtNum)) {
-        formError.textContent = 'Amount must be a valid number (e.g. -50 or 100).';
-        return;
-      }
-    }
-
-    const hasSomething = fieldName || amtRaw !== '' || walletVal || descVal || dateVal;
-    if (!hasSomething) {
-      formError.textContent = 'Add at least one thing (amount, wallet, description, or date).';
-      return;
-    }
+    if (amtRaw !== '') { amtNum = parseFloat(amtRaw); if (isNaN(amtNum)) { formError.textContent = 'Amount must be a valid number.'; return; } }
+    if (!fieldName && amtRaw === '' && !walletVal && !descVal && !dateVal) { formError.textContent = 'Add at least one thing.'; return; }
 
     if (editingId) {
       const idx = entries.findIndex(x => x.id === editingId);
-      if (idx !== -1) {
-        entries[idx] = {
-          ...entries[idx],
-          fieldName: fieldName || '',
-          amount: amtNum !== null ? amtNum : '',
-          wallet: walletVal || '',
-          description: descVal || '',
-          date: dateVal || ''
-        };
-      }
+      if (idx !== -1) entries[idx] = { ...entries[idx], fieldName: fieldName || '', amount: amtNum !== null ? amtNum : '', wallet: walletVal || '', description: descVal || '', date: dateVal || '' };
     } else {
-      entries.push({
-        id: uid(),
-        fieldName: fieldName || '',
-        amount: amtNum !== null ? amtNum : '',
-        wallet: walletVal || '',
-        description: descVal || '',
-        date: dateVal || ''
-      });
+      entries.push({ id: uid(), fieldName: fieldName || '', amount: amtNum !== null ? amtNum : '', wallet: walletVal || '', description: descVal || '', date: dateVal || '' });
     }
-
-    saveEntries();
-    formError.textContent = '';
-
-    if (editingId) {
-      cancelEdit();
-    } else {
-      amount.value = '';
-      wallet.value = '';
-      desc.value = '';
-      if (!date.value) date.value = new Date().toISOString().slice(0,10);
-    }
+    saveData(); formError.textContent = '';
+    if (editingId) cancelEdit();
+    else { amount.value = ''; wallet.value = ''; desc.value = ''; if (!date.value) date.value = new Date().toISOString().slice(0,10); }
     renderAll();
   }
 
   function openColorModal(fieldName) {
-    modalTargetField = fieldName;
-    modalSelectedColor = fieldColors[fieldName] || '#1d3b5c';
-    colorModalTitle.textContent = `Color for "${fieldName}"`;
-    renderColorGrid();
-    customColorPick.value = modalSelectedColor;
-    customColorHex.textContent = modalSelectedColor;
+    modalTargetField = fieldName; modalSelectedColor = fieldColors[fieldName] || '#1d3b5c';
+    colorModalTitle.textContent = `Color for "${fieldName}"`; renderColorGrid();
+    customColorPick.value = modalSelectedColor; customColorHex.textContent = modalSelectedColor;
     colorModal.classList.remove('hidden');
   }
-  function renderColorGrid() {
-    colorGrid.innerHTML = PALETTE.map(c => {
-      const sel = c.toLowerCase() === modalSelectedColor.toLowerCase() ? 'selected' : '';
-      return `<div class="color-swatch ${sel}" style="background:${c}" data-color="${c}"></div>`;
-    }).join('');
-  }
-  function closeColorModal() {
-    colorModal.classList.add('hidden');
-    modalTargetField = null;
-  }
-  function saveColorModal() {
-    if (!modalTargetField) return;
-    fieldColors[modalTargetField] = modalSelectedColor;
-    saveColors();
-    closeColorModal();
-    renderAll();
-  }
+  function renderColorGrid() { colorGrid.innerHTML = PALETTE.map(c => `<div class="color-swatch ${c.toLowerCase() === modalSelectedColor.toLowerCase() ? 'selected' : ''}" style="background:${c}" data-color="${c}"></div>`).join(''); }
+  function closeColorModal() { colorModal.classList.add('hidden'); modalTargetField = null; }
+  function saveColorModal() { if (!modalTargetField) return; fieldColors[modalTargetField] = modalSelectedColor; saveData(); closeColorModal(); renderAll(); }
 
-  function csvEscape(v) {
-    const s = String(v == null ? '' : v);
-    if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
-    return s;
-  }
+  function csvEscape(v) { const s = String(v == null ? '' : v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
   function exportCSV() {
-    if (entries.length === 0) {
-      alert('No entries to export.');
-      return;
-    }
-    const headers = ['Date', 'Field', 'Amount', 'Wallet', 'Description'];
-    const rows = [headers.map(csvEscape).join(',')];
-
-    const sorted = [...entries].sort((a,b) => {
-      const da = a.date || '';
-      const db = b.date || '';
-      if (da === db) return 0;
-      return da < db ? 1 : -1;
-    });
-
-    sorted.forEach(e => {
-      rows.push([
-        e.date || '',
-        e.fieldName || '',
-        (e.amount !== '' && e.amount !== null && e.amount !== undefined) ? Number(e.amount).toFixed(2) : '',
-        e.wallet || '',
-        e.description || ''
-      ].map(csvEscape).join(','));
-    });
-
-    rows.push('');
-    rows.push(['--- SUMMARY ---'].map(csvEscape).join(','));
+    if (entries.length === 0) return alert('No entries to export.');
+    const rows = [['Date', 'Field', 'Amount', 'Wallet', 'Description'].map(csvEscape).join(',')];
+    const sorted = [...entries].sort((a,b) => { const da = a.date || '', db = b.date || ''; return da === db ? 0 : (da < db ? 1 : -1); });
+    sorted.forEach(e => { rows.push([e.date || '', e.fieldName || '', (e.amount !== '' && e.amount !== null) ? Number(e.amount).toFixed(2) : '', e.wallet || '', e.description || ''].map(csvEscape).join(',')); });
+    rows.push(''); rows.push(['--- SUMMARY ---'].map(csvEscape).join(','));
     rows.push(['Grand Total', '', grandTotal().toFixed(2)].map(csvEscape).join(','));
-    rows.push('');
-    rows.push(['Field Totals'].map(csvEscape).join(','));
-    allFieldNames().forEach(f => {
-      rows.push([f, '', fieldTotal(f).toFixed(2)].map(csvEscape).join(','));
-    });
-    rows.push('');
-    rows.push(['Wallet Totals'].map(csvEscape).join(','));
-    discoverWallets().forEach(w => {
-      rows.push([w, '', walletTotal(w).toFixed(2)].map(csvEscape).join(','));
-    });
-
-    const csv = '\uFEFF' + rows.join('\r\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'budget-export-' + new Date().toISOString().slice(0,10) + '.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    rows.push(''); rows.push(['Field Totals'].map(csvEscape).join(','));
+    allFieldNames().forEach(f => { rows.push([f, '', fieldTotal(f).toFixed(2)].map(csvEscape).join(',')); });
+    rows.push(''); rows.push(['Wallet Totals'].map(csvEscape).join(','));
+    discoverWallets().forEach(w => { rows.push([w, '', walletTotal(w).toFixed(2)].map(csvEscape).join(',')); });
+    const blob = new Blob(['\uFEFF' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `budget-export-${new Date().toISOString().slice(0,10)}.csv`; a.click();
   }
 
   function backup() {
-    const data = {
-      fields, entries, fieldColors,
-      exported: new Date().toISOString(), version: 9
-    };
+    const data = { fields, entries, fieldColors, exported: new Date().toISOString(), version: 10 };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'budget-backup-' + new Date().toISOString().slice(0,10) + '.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `budget-backup-${new Date().toISOString().slice(0,10)}.json`; a.click();
   }
 
   function restore(file) {
@@ -865,98 +855,44 @@
     reader.onload = e => {
       try {
         const data = JSON.parse(e.target.result);
-        if (!Array.isArray(data.fields) || !Array.isArray(data.entries)) {
-          throw new Error('Invalid backup file');
-        }
+        if (!Array.isArray(data.fields) || !Array.isArray(data.entries)) throw new Error('Invalid backup file');
         if (!confirm('This will REPLACE all current fields and entries. Continue?')) return;
-        fields = data.fields;
-        entries = data.entries;
-        fieldColors = data.fieldColors && typeof data.fieldColors === 'object' ? data.fieldColors : {};
-        saveFields(); saveEntries(); saveColors();
-        cancelEdit();
-        renderAll();
-        alert('✅ Restored successfully!');
-      } catch (err) {
-        alert('❌ Could not restore: ' + err.message);
-      }
+        fields = data.fields; entries = data.entries; fieldColors = data.fieldColors || {};
+        saveData(); cancelEdit(); renderAll(); alert('✅ Restored successfully!');
+      } catch (err) { alert('❌ Could not restore: ' + err.message); }
     };
     reader.readAsText(file);
   }
 
-  createFieldBtn.addEventListener('click', () => {
-    createField(newField.value, newFieldColor.value);
-  });
-  newField.addEventListener('keypress', e => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      createField(newField.value, newFieldColor.value);
-    }
-  });
-
+  // Event Listeners
+  createFieldBtn.addEventListener('click', () => createField(newField.value, newFieldColor.value));
+  newField.addEventListener('keypress', e => { if (e.key === 'Enter') { e.preventDefault(); createField(newField.value, newFieldColor.value); } });
   fieldList.addEventListener('click', e => {
-    const delBtn = e.target.closest('.delete-btn[data-field]');
-    if (delBtn) { deleteField(delBtn.dataset.field); return; }
-    const colorBtn = e.target.closest('.edit-field-btn[data-color-field]');
-    if (colorBtn) { openColorModal(colorBtn.dataset.colorField); return; }
+    const delBtn = e.target.closest('.delete-btn[data-field]'); if (delBtn) return deleteField(delBtn.dataset.field);
+    const colorBtn = e.target.closest('.edit-field-btn[data-color-field]'); if (colorBtn) return openColorModal(colorBtn.dataset.colorField);
   });
-
-  entryForm.addEventListener('submit', e => {
-    e.preventDefault();
-    saveEntry();
-  });
-
+  entryForm.addEventListener('submit', e => { e.preventDefault(); saveEntry(); });
   transList.addEventListener('click', e => {
-    const delBtn = e.target.closest('.delete-btn[data-id]');
-    if (delBtn) { deleteEntry(delBtn.dataset.id); return; }
-    const editBtn = e.target.closest('.edit-btn[data-edit-id]');
-    if (editBtn) { startEdit(editBtn.dataset.editId); return; }
+    const delBtn = e.target.closest('.delete-btn[data-id]'); if (delBtn) return deleteEntry(delBtn.dataset.id);
+    const editBtn = e.target.closest('.edit-btn[data-edit-id]'); if (editBtn) return startEdit(editBtn.dataset.editId);
   });
-
   cancelEditBtn.addEventListener('click', cancelEdit);
   filterField.addEventListener('change', renderTrans);
   filterWallet.addEventListener('change', renderTrans);
-
-  clearAllBtn.addEventListener('click', () => {
-    if (entries.length === 0) return;
-    if (!confirm('Delete ALL entries? (Fields stay.)')) return;
-    entries = [];
-    saveEntries();
-    cancelEdit();
-    renderAll();
-  });
-
+  clearAllBtn.addEventListener('click', () => { if (entries.length && confirm('Delete ALL entries? (Fields stay.)')) { entries = []; saveData(); cancelEdit(); renderAll(); } });
   exportCsvBtn.addEventListener('click', exportCSV);
   backupBtn.addEventListener('click', backup);
   restoreBtn.addEventListener('click', () => restoreFile.click());
-  restoreFile.addEventListener('change', e => {
-    const f = e.target.files[0];
-    if (f) restore(f);
-    e.target.value = '';
-  });
-
-  colorGrid.addEventListener('click', e => {
-    const sw = e.target.closest('.color-swatch');
-    if (!sw) return;
-    modalSelectedColor = sw.dataset.color;
-    customColorPick.value = modalSelectedColor;
-    customColorHex.textContent = modalSelectedColor;
-    renderColorGrid();
-  });
-  customColorPick.addEventListener('input', () => {
-    modalSelectedColor = customColorPick.value;
-    customColorHex.textContent = modalSelectedColor;
-    renderColorGrid();
-  });
+  restoreFile.addEventListener('change', e => { const f = e.target.files[0]; if (f) restore(f); e.target.value = ''; });
+  
+  colorGrid.addEventListener('click', e => { const sw = e.target.closest('.color-swatch'); if (sw) { modalSelectedColor = sw.dataset.color; customColorPick.value = modalSelectedColor; customColorHex.textContent = modalSelectedColor; renderColorGrid(); } });
+  customColorPick.addEventListener('input', () => { modalSelectedColor = customColorPick.value; customColorHex.textContent = modalSelectedColor; renderColorGrid(); });
   colorCancelBtn.addEventListener('click', closeColorModal);
   colorSaveBtn.addEventListener('click', saveColorModal);
-  colorModal.addEventListener('click', e => {
-    if (e.target === colorModal) closeColorModal();
-  });
+  colorModal.addEventListener('click', e => { if (e.target === colorModal) closeColorModal(); });
 
-  load();
+  // Initialize date
   date.value = new Date().toISOString().slice(0,10);
-  renderAll();
-})();
 </script>
 </body>
 </html>
