@@ -1,5 +1,5 @@
 {
-  "name": "Budget Manager",
+  "name": "Budget & P&L Manager",
   "short_name": "Budget",
   "start_url": "./index.html",
   "display": "standalone",
@@ -7,10 +7,10 @@
   "theme_color": "#0a2540",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/2489/2489756.png",
+      "src": "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/savings/default/512px.svg",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }
