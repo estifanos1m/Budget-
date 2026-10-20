@@ -4,16 +4,41 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0a2540">
-<title>Budget Manager</title>
-    <link rel="manifest" href="manifest.json">
+<title>Budget & P&L Manager</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #f0f4fa; }
   body {
-    margin: 0; padding: 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #f0f4fa; color: #0a2540;
-    font-size: 16px; padding-bottom: 2rem;
+    color: #0a2540; font-size: 16px;
   }
+
+  /* Bottom Tabs */
+  .bottom-tabs {
+    display: flex; position: fixed; bottom: 0; left: 0; width: 100%; height: 60px;
+    background: white; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+    padding-bottom: env(safe-area-inset-bottom); /* For iPhones with home bars */
+  }
+  .bottom-tab {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-weight: 600; color: #6d839b; cursor: pointer; border-top: 3px solid transparent;
+    transition: 0.2s; font-size: 0.8rem; gap: 0.2rem;
+  }
+  .bottom-tab.active { color: #1d3b5c; border-top-color: #1d3b5c; background: #f8fafc; }
+  .bottom-tab .icon { font-size: 1.3rem; }
+
+  /* Horizontal Swipe Wrapper */
+  .swipe-wrapper {
+    display: flex; width: 200vw; height: calc(100vh - 60px);
+    overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth;
+  }
+  .swipe-wrapper::-webkit-scrollbar { display: none; }
+  
+  .page {
+    width: 100vw; height: 100%; overflow-y: auto; scroll-snap-align: start; flex-shrink: 0;
+    padding-bottom: 2rem;
+  }
+
   .container { max-width: 600px; margin: 0 auto; padding: 1rem; }
   h1 { font-size: 1.5rem; margin: 0.5rem 0 1rem; display: flex; align-items: center; gap: 0.5rem; }
 
@@ -24,7 +49,8 @@
   .auth-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; background: #f0f4fa; padding: 0.35rem; border-radius: 0.9rem; }
   .auth-tab { flex: 1; padding: 0.6rem; text-align: center; border-radius: 0.6rem; cursor: pointer; font-weight: 600; color: #6d839b; transition: 0.2s; }
   .auth-tab.active { background: white; color: #1d3b5c; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-  
+
+  /* Cards & UI */
   .total-card {
     background: linear-gradient(135deg, #0a2540, #1d3b5c);
     color: white; padding: 1.5rem; border-radius: 1.25rem;
@@ -34,241 +60,96 @@
   .total-amount { font-size: 2.4rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
   .total-amount.negative { color: #ff9a9a; }
 
-  .breakdown-card {
-    background: white; border-radius: 1.25rem;
-    padding: 1.25rem; margin-bottom: 1rem;
-    box-shadow: 0 2px 8px rgba(10,37,64,0.06);
-  }
-  .breakdown-card h3 {
-    font-size: 0.85rem; text-transform: uppercase;
-    letter-spacing: 1px; color: #3d5772;
-    margin: 0 0 0.75rem; font-weight: 700;
-  }
-  .breakdown-row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 0.55rem 0.75rem; background: #f6f9fe;
-    border-radius: 0.7rem; margin-bottom: 0.4rem;
-    font-size: 0.95rem;
-  }
-  .breakdown-row .label { font-weight: 500; display: flex; align-items: center; gap: 0.5rem; }
-  .breakdown-row .color-dot {
-    width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
-    border: 2px solid rgba(0,0,0,0.1);
-  }
-  .breakdown-row .amt { font-weight: 700; color: #1d3b5c; }
-  .breakdown-row .amt.negative { color: #d14b4b; }
-  .breakdown-empty { color: #8a9cb0; font-size: 0.85rem; font-style: italic; padding: 0.3rem 0.2rem; }
-
   .card {
-    background: white; border-radius: 1.25rem;
-    padding: 1.25rem; margin-bottom: 1rem;
+    background: white; border-radius: 1.25rem; padding: 1.25rem; margin-bottom: 1rem;
     box-shadow: 0 2px 8px rgba(10,37,64,0.06);
   }
-  .card h2 { font-size: 1.1rem; margin: 0 0 1rem; display: flex; align-items: center; gap: 0.4rem; justify-content: space-between; }
+  .card h2 { font-size: 1.1rem; margin: 0 0 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; }
 
   input, select, textarea, button { font-family: inherit; font-size: 16px; }
   .input-group { margin-bottom: 0.9rem; }
-  .input-group label {
-    display: block; font-size: 0.8rem; font-weight: 600;
-    color: #3d5772; margin-bottom: 0.35rem;
-    text-transform: uppercase; letter-spacing: 0.5px;
-  }
-  .input-group label .optional { color: #9aa9b9; font-weight: 400; text-transform: none; letter-spacing: 0; }
+  .input-group label { display: block; font-size: 0.8rem; font-weight: 600; color: #3d5772; margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.5px; }
   input[type="text"], input[type="number"], input[type="date"], input[type="email"], input[type="password"], select, textarea {
-    width: 100%; padding: 0.9rem 1rem;
-    border: 1.5px solid #dbe2ea; border-radius: 0.9rem;
-    background: #fafbfe; outline: none;
-    transition: border-color 0.15s;
-    -webkit-appearance: none; appearance: none;
+    width: 100%; padding: 0.9rem 1rem; border: 1.5px solid #dbe2ea; border-radius: 0.9rem;
+    background: #fafbfe; outline: none; transition: border-color 0.15s; -webkit-appearance: none;
   }
   input:focus, select:focus, textarea:focus { border-color: #1d3b5c; background: white; }
   textarea { min-height: 60px; resize: vertical; }
 
   .btn {
-    display: inline-flex; align-items: center; justify-content: center;
-    gap: 0.4rem; background: #1d3b5c; color: white;
-    border: none; padding: 0.95rem 1.4rem;
-    border-radius: 0.9rem; font-size: 1rem; font-weight: 600;
-    cursor: pointer; width: 100%;
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+    background: #1d3b5c; color: white; border: none; padding: 0.95rem 1.4rem;
+    border-radius: 0.9rem; font-size: 1rem; font-weight: 600; cursor: pointer; width: 100%;
     transition: background 0.15s, transform 0.05s;
   }
   .btn:active { transform: scale(0.98); background: #112b41; }
   .btn-secondary { background: white; color: #1d3b5c; border: 1.5px solid #1d3b5c; }
   .btn-secondary:active { background: #eef3fa; }
   .btn-small { padding: 0.6rem 0.9rem; font-size: 0.85rem; width: auto; }
-  .btn-danger { background: #d14b4b; color: white; }
   .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-top: 0.5rem; }
   .btn-full { grid-column: 1 / -1; }
 
   .field-create { display: flex; gap: 0.5rem; flex-wrap: wrap; }
   .field-create input[type="text"] { flex: 1; min-width: 140px; }
-  .field-create .color-input {
-    width: 50px; height: 50px; padding: 4px;
-    border-radius: 0.9rem; cursor: pointer;
-    border: 1.5px solid #dbe2ea; background: #fafbfe;
-    -webkit-appearance: none; appearance: none;
-  }
+  .field-create .color-input { width: 50px; height: 50px; padding: 4px; border-radius: 0.9rem; cursor: pointer; border: 1.5px solid #dbe2ea; background: #fafbfe; -webkit-appearance: none; }
   .field-create .color-input::-webkit-color-swatch-wrapper { padding: 0; }
   .field-create .color-input::-webkit-color-swatch { border: none; border-radius: 0.6rem; }
-  .field-create .color-input::-moz-color-swatch { border: none; border-radius: 0.6rem; }
   .field-create .btn { width: auto; padding: 0.9rem 1.1rem; }
 
-  .field-list { margin-top: 1rem; }
-  .field-item {
-    display: flex; justify-content: space-between; align-items: center;
-    background: #f6f9fe; padding: 0.75rem 0.9rem;
-    border-radius: 0.8rem; margin-bottom: 0.5rem;
-    border-left: 5px solid #1d3b5c;
-  }
-  .field-item .left { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; min-width: 0; }
-  .field-item .name { font-weight: 600; word-break: break-word; display: flex; align-items: center; gap: 0.4rem; }
-  .field-item .meta { font-size: 0.75rem; color: #6d839b; }
-  .field-item .field-total {
-    font-weight: 700; color: #1d3b5c; font-size: 0.95rem;
-    white-space: nowrap; margin-left: 0.5rem;
-  }
-  .field-item .field-total.negative { color: #d14b4b; }
-  .field-item .actions { display: flex; gap: 0.4rem; align-items: center; margin-left: 0.5rem; }
-  .delete-btn {
-    background: #ffeaea; border: none; color: #d14b4b;
-    font-size: 0.9rem; width: 30px; height: 30px;
-    border-radius: 50%; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  }
-  .edit-field-btn {
-    background: #e8f0fb; border: none; color: #1d3b5c;
-    font-size: 0.85rem; width: 30px; height: 30px;
-    border-radius: 50%; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  }
-
-  .wallet-list { margin-top: 0.25rem; }
-  .wallet-item {
-    display: flex; justify-content: space-between; align-items: center;
-    background: #eaf7ea; padding: 0.75rem 0.9rem;
-    border-radius: 0.8rem; margin-bottom: 0.5rem;
-    border-left: 4px solid #2d7a2d;
-  }
-  .wallet-item .wallet-info { flex: 1; min-width: 0; }
-  .wallet-item .wallet-name { font-weight: 600; color: #1e5a1e; word-break: break-word; }
-  .wallet-item .wallet-count { font-size: 0.75rem; color: #4d8a4d; }
-  .wallet-item .wallet-total { font-weight: 700; color: #2d7a2d; white-space: nowrap; margin-left: 0.5rem; font-size: 0.95rem; }
-  .wallet-item .wallet-total.negative { color: #d14b4b; }
-
-  .filter-row {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;
-    margin-bottom: 0.75rem;
-  }
-  .filter-row select { padding: 0.65rem 0.85rem; font-size: 0.9rem; border-radius: 0.7rem; }
-
+  /* Transactions */
   .transaction {
-    background: #f9fbfe; border-radius: 0.9rem;
-    padding: 0.9rem 1rem; margin-bottom: 0.6rem;
-    border: 1px solid #eef2f8;
-    display: flex; justify-content: space-between;
-    align-items: flex-start; gap: 0.6rem;
+    background: #f9fbfe; border-radius: 0.9rem; padding: 0.9rem 1rem; margin-bottom: 0.6rem;
+    border: 1px solid #eef2f8; display: flex; justify-content: space-between; align-items: flex-start; gap: 0.6rem;
     border-left: 4px solid #1d3b5c;
   }
-  .transaction.editing { border: 2px solid #1d3b5c; background: #f0f6ff; }
   .trans-info { flex: 1; min-width: 0; }
-  .trans-field {
-    display: inline-block; color: white;
-    font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.6rem;
-    border-radius: 1rem; margin-bottom: 0.35rem;
-    text-transform: uppercase; letter-spacing: 0.5px;
-    background: #1d3b5c;
-  }
+  .trans-field { display: inline-block; color: white; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 1rem; margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.5px; background: #1d3b5c; }
   .trans-desc { font-weight: 500; word-break: break-word; margin-bottom: 0.2rem; }
-  .trans-wallet {
-    display: inline-block; background: #e8f5e8; color: #2d7a2d;
-    font-size: 0.75rem; padding: 0.15rem 0.6rem;
-    border-radius: 1rem; margin-bottom: 0.25rem;
-  }
+  .trans-wallet { display: inline-block; background: #e8f5e8; color: #2d7a2d; font-size: 0.75rem; padding: 0.15rem 0.6rem; border-radius: 1rem; margin-bottom: 0.25rem; }
   .trans-date { font-size: 0.78rem; color: #6d839b; }
   .trans-right { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
   .trans-amount { font-weight: 700; color: #1d3b5c; font-size: 1.05rem; white-space: nowrap; }
   .trans-amount.negative { color: #d14b4b; }
 
-  .edit-btn {
-    background: #e8f0fb; border: none; color: #1d3b5c;
-    font-size: 0.9rem; width: 30px; height: 30px;
-    border-radius: 50%; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  }
+  .delete-btn { background: #ffeaea; border: none; color: #d14b4b; font-size: 0.9rem; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .edit-btn { background: #e8f0fb; border: none; color: #1d3b5c; font-size: 0.9rem; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
   .empty { text-align: center; color: #8a9cb0; padding: 1.5rem 1rem; font-size: 0.9rem; }
   .error { color: #d14b4b; font-size: 0.85rem; margin-top: 0.5rem; min-height: 1.1rem; }
-
-  .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
-  .section-head h2 { margin: 0; }
-
-  .backup-note { font-size: 0.8rem; color: #6d839b; text-align: center; margin-top: 0.75rem; line-height: 1.4; }
-  .hint { font-size: 0.75rem; color: #8a9cb0; margin-top: 0.3rem; font-style: italic; }
-
-  .editing-banner {
-    background: #fff8e1; border: 1px solid #f5c842;
-    padding: 0.6rem 0.9rem; border-radius: 0.7rem;
-    margin-bottom: 0.75rem; font-size: 0.85rem;
-    color: #7a5d00; display: flex;
-    justify-content: space-between; align-items: center;
-  }
-  .editing-banner button {
-    background: transparent; border: none;
-    color: #7a5d00; font-weight: 600;
-    cursor: pointer; font-size: 0.85rem;
-    text-decoration: underline;
-  }
-
-  .modal-overlay {
-    position: fixed; inset: 0; background: rgba(10,37,64,0.6);
-    display: flex; align-items: center; justify-content: center;
-    padding: 1rem; z-index: 1000;
-  }
-  .modal-overlay.hidden { display: none; }
-  .modal {
-    background: white; border-radius: 1.25rem;
-    padding: 1.5rem; max-width: 380px; width: 100%;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-  }
-  .modal h3 { margin: 0 0 1rem; font-size: 1.1rem; }
-  .modal .color-grid {
-    display: grid; grid-template-columns: repeat(6, 1fr);
-    gap: 0.5rem; margin-bottom: 1rem;
-  }
-  .modal .color-swatch {
-    width: 100%; aspect-ratio: 1; border-radius: 0.6rem;
-    cursor: pointer; border: 2px solid transparent;
-    transition: transform 0.1s;
-  }
-  .modal .color-swatch:active { transform: scale(0.9); }
-  .modal .color-swatch.selected { border-color: #0a2540; box-shadow: 0 0 0 2px white inset; }
-  .modal .custom-color-row {
-    display: flex; gap: 0.5rem; align-items: center;
-    margin-bottom: 1rem;
-  }
-  .modal .custom-color-row label { font-size: 0.9rem; }
-  .modal .custom-color-row input[type="color"] {
-    width: 50px; height: 40px; padding: 3px;
-    border-radius: 0.6rem; border: 1.5px solid #dbe2ea;
-    cursor: pointer;
-  }
-  .modal .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-
-  /* Utility */
   .hidden { display: none !important; }
-  .loading-screen { text-align: center; padding: 3rem 1rem; color: #6d839b; }
+
+  /* --- P&L SPECIFIC STYLES --- */
+  .month-nav { display: flex; justify-content: space-between; align-items: center; background: #1d3b5c; color: white; padding: 0.8rem 1rem; border-radius: 1rem; margin-bottom: 1rem; }
+  .month-nav button { background: transparent; border: none; color: white; font-size: 1.5rem; cursor: pointer; padding: 0 0.5rem; }
+  .month-nav .month-title { font-weight: 700; font-size: 1.1rem; }
+  
+  .stream-card { background: white; border-radius: 1.25rem; padding: 1.25rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(10,37,64,0.06); border-left: 5px solid #2ecc71; }
+  .stream-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid #eef2f8; }
+  .stream-name { font-weight: 700; font-size: 1.1rem; color: #0a2540; }
+  .stream-total { font-weight: 700; font-size: 1.1rem; color: #2ecc71; }
+  .stream-total.negative { color: #d14b4b; }
+  
+  .pnl-entry-form { display: grid; gap: 0.5rem; margin-top: 1rem; background: #f8fafc; padding: 1rem; border-radius: 1rem; }
+  .pnl-entry-form input, .pnl-entry-form textarea { padding: 0.6rem 0.8rem; font-size: 0.9rem; border-radius: 0.6rem; }
+  .pnl-entry-form .btn { padding: 0.6rem; font-size: 0.9rem; }
+  
+  .pnl-wallet-summary { background: #eaf7ea; border-left: 5px solid #2d7a2d; border-radius: 1.25rem; padding: 1.25rem; margin-top: 2rem; margin-bottom: 2rem; box-shadow: 0 2px 8px rgba(10,37,64,0.06); }
+  .pnl-wallet-row { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #c8e6c9; font-weight: 500; }
+  .pnl-wallet-row:last-child { border-bottom: none; }
+  .pnl-wallet-row .amt { font-weight: 700; color: #2d7a2d; }
+  .pnl-wallet-row .amt.negative { color: #d14b4b; }
 </style>
 </head>
 <body>
 
 <!-- LOADING SCREEN -->
-<div id="loadingScreen" class="loading-screen">
+<div id="loadingScreen" style="text-align: center; padding: 3rem 1rem; color: #6d839b;">
   <h2>Connecting to Cloud... ☁️</h2>
 </div>
 
 <!-- AUTH SCREEN -->
 <div id="authScreen" class="auth-container hidden">
-  <h1>💰 Budget Manager</h1>
+  <h1>💰 Budget & P&L</h1>
   <p class="auth-subtitle">Log in to sync your data across devices.</p>
   
   <div class="auth-tabs">
@@ -290,133 +171,164 @@
   </form>
 </div>
 
-<!-- MAIN APP SCREEN -->
-<div id="appScreen" class="container hidden">
-  <h1 style="justify-content: space-between;">
-  <span>💰 Budget Manager</span>
-  <div style="display: flex; gap: 0.5rem;">
-    <button class="btn btn-secondary btn-small hidden" id="installBtn">📥 Install</button>
-    <button class="btn btn-secondary btn-small" id="logoutBtn">Log Out</button>
-  </div>
-</h1>
-  <div class="total-card">
-    <div class="total-label">Grand Total (all fields)</div>
-    <div class="total-amount" id="totalDisplay">$0.00</div>
-  </div>
+<!-- MAIN APP (Hidden until login) -->
+<div id="mainApp" class="hidden" style="height: 100%; display: flex; flex-direction: column;">
+  
+  <!-- Swipe Wrapper -->
+  <div class="swipe-wrapper" id="swipeWrapper">
+    
+    <!-- ========================================== -->
+    <!-- PAGE 1: BUDGET MANAGER (ORIGINAL)          -->
+    <!-- ========================================== -->
+    <div class="page" id="budgetPage">
+      <div class="container">
+        <h1 style="justify-content: space-between;">
+          <span>💰 Budget Manager</span>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-secondary btn-small hidden" id="installBtn">📥 Install</button>
+            <button class="btn btn-secondary btn-small" id="logoutBtn">Log Out</button>
+          </div>
+        </h1>
 
-  <div class="breakdown-card">
-    <h3>📂 Field Totals</h3>
-    <div id="fieldTotalsBreakdown"></div>
-  </div>
+        <div class="total-card">
+          <div class="total-label">Grand Total (all fields)</div>
+          <div class="total-amount" id="totalDisplay">$0.00</div>
+        </div>
 
-  <div class="card">
-    <h2>📂 Fields</h2>
-    <div class="field-create">
-      <input type="text" id="newField" placeholder="e.g. Food, Rent" maxlength="30">
-      <input type="color" id="newFieldColor" class="color-input" value="#1d3b5c" title="Field color">
-      <button class="btn btn-small" id="createFieldBtn">+ Add</button>
-    </div>
-    <div id="fieldList" class="field-list"></div>
-  </div>
+        <div class="card">
+          <h3 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: #3d5772; margin: 0 0 0.75rem; font-weight: 700;">📂 Field Totals</h3>
+          <div id="fieldTotalsBreakdown"></div>
+        </div>
 
-  <div class="card">
-    <h2>💼 Wallets (auto)</h2>
-    <div id="walletList" class="wallet-list">
-      <div class="empty">No wallets yet — add a "Wallet" value to an entry.</div>
-    </div>
-    <div class="hint">Wallets appear automatically from your entries.</div>
-  </div>
+        <div class="card">
+          <h2>📂 Fields</h2>
+          <div class="field-create">
+            <input type="text" id="newField" placeholder="e.g. Food, Rent" maxlength="30">
+            <input type="color" id="newFieldColor" class="color-input" value="#1d3b5c" title="Field color">
+            <button class="btn btn-small" id="createFieldBtn">+ Add</button>
+          </div>
+          <div id="fieldList" style="margin-top: 1rem;"></div>
+        </div>
 
-  <div class="card">
-    <h2 id="formTitle">➕ Add Entry</h2>
-    <div id="editingBanner" class="editing-banner" style="display:none;">
-      <span>✏️ Editing entry...</span>
-      <button id="cancelEditBtn">Cancel</button>
-    </div>
-    <form id="entryForm">
-      <div class="input-group">
-        <label>Field <span class="optional">(optional)</span></label>
-        <select id="fieldSelect">
-          <option value="">— No field —</option>
-        </select>
+        <div class="card">
+          <h2>💼 Wallets (auto)</h2>
+          <div id="walletList">
+            <div class="empty">No wallets yet — add a "Wallet" value to an entry.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 id="formTitle">➕ Add Entry</h2>
+          <div id="editingBanner" style="background: #fff8e1; border: 1px solid #f5c842; padding: 0.6rem 0.9rem; border-radius: 0.7rem; margin-bottom: 0.75rem; font-size: 0.85rem; color: #7a5d00; display: flex; justify-content: space-between; align-items: center; display: none;">
+            <span>✏️ Editing entry...</span>
+            <button id="cancelEditBtn" style="background: transparent; border: none; color: #7a5d00; font-weight: 600; cursor: pointer; text-decoration: underline;">Cancel</button>
+          </div>
+          <form id="entryForm">
+            <div class="input-group">
+              <label>Field <span style="color: #9aa9b9; font-weight: 400; text-transform: none;">(optional)</span></label>
+              <select id="fieldSelect"><option value="">— No field —</option></select>
+            </div>
+            <div class="input-group">
+              <label>Amount ($) <span style="color: #9aa9b9; font-weight: 400; text-transform: none;">(optional, negatives OK)</span></label>
+              <input type="number" id="amount" step="0.01" placeholder="e.g. -50 or 100">
+            </div>
+            <div class="input-group">
+              <label>Wallet / Where placed <span style="color: #9aa9b9; font-weight: 400; text-transform: none;">(optional)</span></label>
+              <input type="text" id="wallet" placeholder="e.g. Cash, CBE" maxlength="40" list="walletSuggestions">
+              <datalist id="walletSuggestions"></datalist>
+            </div>
+            <div class="input-group">
+              <label>Description <span style="color: #9aa9b9; font-weight: 400; text-transform: none;">(optional)</span></label>
+              <textarea id="desc" placeholder="What was this for?" maxlength="120"></textarea>
+            </div>
+            <div class="input-group">
+              <label>Date <span style="color: #9aa9b9; font-weight: 400; text-transform: none;">(optional)</span></label>
+              <input type="date" id="date">
+            </div>
+            <button type="submit" class="btn" id="submitBtn">Add Entry</button>
+            <div class="error" id="formError"></div>
+          </form>
+        </div>
+
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <h2 style="margin: 0;">📋 Entries</h2>
+            <button class="btn btn-secondary btn-small" id="clearAllBtn">Clear All</button>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.75rem;">
+            <select id="filterField" style="padding: 0.65rem 0.85rem; font-size: 0.9rem; border-radius: 0.7rem;"><option value="">Filter: All fields</option></select>
+            <select id="filterWallet" style="padding: 0.65rem 0.85rem; font-size: 0.9rem; border-radius: 0.7rem;"><option value="">Filter: All wallets</option></select>
+          </div>
+          <div id="transList"></div>
+        </div>
+
+        <div class="card" style="margin-bottom: 80px;"> <!-- Extra margin for bottom tabs -->
+          <h2>📤 Export & Backup</h2>
+          <div class="btn-row">
+            <button class="btn btn-secondary" id="exportCsvBtn">📤 Export CSV</button>
+            <button class="btn btn-secondary" id="backupBtn">⬇️ Backup</button>
+            <button class="btn btn-secondary btn-full" id="restoreBtn">⬆️ Restore Backup</button>
+          </div>
+          <input type="file" id="restoreFile" accept=".json" style="display:none">
+        </div>
       </div>
+    </div>
 
-      <div class="input-group">
-        <label>Amount ($) <span class="optional">(optional, negatives OK)</span></label>
-        <input type="number" id="amount" step="0.01" placeholder="e.g. -50 or 100">
-        <div class="hint">Positive = income · Negative = expense</div>
-      </div>
+    <!-- ========================================== -->
+    <!-- PAGE 2: P&L INCOME STREAMS (NEW)           -->
+    <!-- ========================================== -->
+    <div class="page" id="pnlPage">
+      <div class="container" style="padding-bottom: 80px;"> <!-- Extra padding for bottom tabs -->
+        
+        <h1>📈 Monthly P&L</h1>
 
-      <div class="input-group">
-        <label>Wallet / Where placed <span class="optional">(optional)</span></label>
-        <input type="text" id="wallet" placeholder="e.g. Cash, CBE, Telebirr" maxlength="40" list="walletSuggestions">
-        <datalist id="walletSuggestions"></datalist>
-      </div>
+        <!-- Month Navigation & Total -->
+        <div class="month-nav">
+          <button id="pnlPrevMonth">←</button>
+          <div class="month-title" id="pnlMonthDisplay">Month</div>
+          <button id="pnlNextMonth">→</button>
+        </div>
 
-      <div class="input-group">
-        <label>Description <span class="optional">(optional)</span></label>
-        <textarea id="desc" placeholder="What was this for?" maxlength="120"></textarea>
-      </div>
+        <div class="total-card" style="background: linear-gradient(135deg, #2d7a2d, #1e5a1e);">
+          <div class="total-label">Total Net P&L (This Month)</div>
+          <div class="total-amount" id="pnlTotalDisplay">$0.00</div>
+        </div>
 
-      <div class="input-group">
-        <label>Date <span class="optional">(optional)</span></label>
-        <input type="date" id="date">
-      </div>
+        <!-- Create Stream -->
+        <div class="card">
+          <h2>➕ Create Income Stream</h2>
+          <div class="field-create">
+            <input type="text" id="newStreamName" placeholder="e.g. Salary, Freelance" maxlength="30">
+            <button class="btn btn-small" id="createStreamBtn">+ Add Stream</button>
+          </div>
+        </div>
 
-      <button type="submit" class="btn" id="submitBtn">Add Entry</button>
-      <div class="error" id="formError"></div>
-      <div class="hint" style="text-align:center;margin-top:0.5rem;">
-        Every field is optional.
+        <!-- List of Streams -->
+        <div id="pnlStreamsList"></div>
+
+        <!-- Wallet Totals for Month (Bottom) -->
+        <div class="pnl-wallet-summary" id="pnlWalletSummary" style="display: none;">
+          <h3 style="margin: 0 0 1rem; font-size: 1rem; color: #1e5a1e;">💼 Wallet Totals (This Month)</h3>
+          <div id="pnlWalletRows"></div>
+        </div>
+
       </div>
-    </form>
+    </div>
+
   </div>
 
-  <div class="card">
-    <div class="section-head">
-      <h2>📋 Entries</h2>
-      <button class="btn btn-secondary btn-small" id="clearAllBtn">Clear All</button>
+  <!-- BOTTOM NAVIGATION TABS -->
+  <div class="bottom-tabs">
+    <div class="bottom-tab active" id="tabBudget">
+      <span class="icon">💰</span>
+      <span>Budget</span>
     </div>
-
-    <div class="filter-row">
-      <select id="filterField">
-        <option value="">Filter: All fields</option>
-      </select>
-      <select id="filterWallet">
-        <option value="">Filter: All wallets</option>
-      </select>
-    </div>
-
-    <div id="transList"></div>
-  </div>
-
-  <div class="card">
-    <h2>📤 Export & Backup</h2>
-    <div class="btn-row">
-      <button class="btn btn-secondary" id="exportCsvBtn">📤 Export CSV</button>
-      <button class="btn btn-secondary" id="backupBtn">⬇️ Backup</button>
-      <button class="btn btn-secondary btn-full" id="restoreBtn">⬆️ Restore Backup</button>
-    </div>
-    <input type="file" id="restoreFile" accept=".json" style="display:none">
-    <div class="backup-note">
-      Your data is synced to the cloud automatically. Use backup for offline safety.
+    <div class="bottom-tab" id="tabPnl">
+      <span class="icon">📈</span>
+      <span>P&L Streams</span>
     </div>
   </div>
-</div>
 
-<div class="modal-overlay hidden" id="colorModal">
-  <div class="modal">
-    <h3 id="colorModalTitle">Pick a color</h3>
-    <div class="color-grid" id="colorGrid"></div>
-    <div class="custom-color-row">
-      <label>Custom:</label>
-      <input type="color" id="customColorPick" value="#1d3b5c">
-      <span id="customColorHex" style="font-family:monospace;font-size:0.9rem;">#1d3b5c</span>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-secondary" id="colorCancelBtn">Cancel</button>
-      <button class="btn" id="colorSaveBtn">Save</button>
-    </div>
-  </div>
 </div>
 
 <!-- FIREBASE SDK -->
@@ -425,34 +337,27 @@
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-  // ==========================================
-  // ⚠️ REPLACE THIS WITH YOUR FIREBASE CONFIG ⚠️
-  // ==========================================
+  // YOUR FIREBASE CONFIG
   const firebaseConfig = {
     apiKey: "AIzaSyDd30YzkHGihbrVCftPdJ_s7D0NGEBjQ20",
-  authDomain: "budget-app-6134c.firebaseapp.com",
-  projectId: "budget-app-6134c",
-  storageBucket: "budget-app-6134c.firebasestorage.app",
-  messagingSenderId: "578038046340",
-  appId: "1:578038046340:web:bc4ff85ed238e7344c2cd1"
+    authDomain: "budget-app-6134c.firebaseapp.com",
+    projectId: "budget-app-6134c",
+    storageBucket: "budget-app-6134c.firebasestorage.app",
+    messagingSenderId: "578038046340",
+    appId: "1:578038046340:web:bc4ff85ed238e7344c2cd1"
   };
 
   let app, auth, db;
   let currentUser = null;
 
-  // Check if config is filled
-  if (firebaseConfig.apiKey === "PASTE_YOUR_API_KEY_HERE") {
-    document.getElementById('loadingScreen').innerHTML = '<h2 style="color:red;">⚠️ Setup Required</h2><p>Please edit the code and replace the firebaseConfig with your actual keys.</p>';
-  } else {
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
-  }
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
 
   // ---- UI Elements ----
   const loadingScreen = document.getElementById('loadingScreen');
   const authScreen = document.getElementById('authScreen');
-  const appScreen = document.getElementById('appScreen');
+  const mainApp = document.getElementById('mainApp');
   
   const tabLogin = document.getElementById('tabLogin');
   const tabSignup = document.getElementById('tabSignup');
@@ -465,15 +370,21 @@
 
   let isLoginMode = true;
 
-  // ---- App State ----
+  // ---- App State (Budget) ----
   let fields = [];
   let fieldColors = {};
   let entries = [];
   let editingId = null;
 
+  // ---- App State (P&L) ----
+  let pnlStreams = []; 
+  let currentPnlMonth = new Date().toISOString().slice(0, 7); // e.g. "2024-05"
+
   const PALETTE = ['#1d3b5c', '#d14b4b', '#e67e22', '#f39c12', '#f1c40f', '#2ecc71', '#27ae60', '#16a085', '#3498db', '#2980b9', '#9b59b6', '#8e44ad', '#e84393', '#fd79a8', '#636e72', '#34495e', '#b33939', '#6f1e51'];
 
   const $ = id => document.getElementById(id);
+  
+  // Budget Elements
   const totalDisplay = $('totalDisplay');
   const newField = $('newField');
   const newFieldColor = $('newFieldColor');
@@ -502,92 +413,89 @@
   const filterField = $('filterField');
   const filterWallet = $('filterWallet');
 
-  const colorModal = $('colorModal');
-  const colorModalTitle = $('colorModalTitle');
-  const colorGrid = $('colorGrid');
-  const customColorPick = $('customColorPick');
-  const customColorHex = $('customColorHex');
-  const colorCancelBtn = $('colorCancelBtn');
-  const colorSaveBtn = $('colorSaveBtn');
+  // P&L Elements & Bottom Tabs
+  const tabBudget = $('tabBudget');
+  const tabPnl = $('tabPnl');
+  const swipeWrapper = $('swipeWrapper');
+  const pnlPrevMonth = $('pnlPrevMonth');
+  const pnlNextMonth = $('pnlNextMonth');
+  const pnlMonthDisplay = $('pnlMonthDisplay');
+  const pnlTotalDisplay = $('pnlTotalDisplay');
+  const newStreamName = $('newStreamName');
+  const createStreamBtn = $('createStreamBtn');
+  const pnlStreamsList = $('pnlStreamsList');
+  const pnlWalletSummary = $('pnlWalletSummary');
+  const pnlWalletRows = $('pnlWalletRows');
 
-  let modalTargetField = null;
-  let modalSelectedColor = '#1d3b5c';
+  // Tabs Logic (Bottom Navigation)
+  tabBudget.addEventListener('click', () => {
+    tabBudget.classList.add('active'); tabPnl.classList.remove('active');
+    swipeWrapper.scrollTo({ left: 0, behavior: 'smooth' });
+  });
+  tabPnl.addEventListener('click', () => {
+    tabPnl.classList.add('active'); tabBudget.classList.remove('active');
+    swipeWrapper.scrollTo({ left: window.innerWidth, behavior: 'smooth' });
+  });
+  swipeWrapper.addEventListener('scroll', () => {
+    if (swipeWrapper.scrollLeft > window.innerWidth / 2) {
+      tabPnl.classList.add('active'); tabBudget.classList.remove('active');
+    } else {
+      tabBudget.classList.add('active'); tabPnl.classList.remove('active');
+    }
+  });
 
   // ==========================================
-  // AUTHENTICATION LOGIC
+  // AUTHENTICATION
   // ==========================================
-  
   tabLogin.addEventListener('click', () => {
-    isLoginMode = true;
-    tabLogin.classList.add('active');
-    tabSignup.classList.remove('active');
-    authSubmitBtn.textContent = 'Log In';
-    authError.textContent = '';
+    isLoginMode = true; tabLogin.classList.add('active'); tabSignup.classList.remove('active');
+    authSubmitBtn.textContent = 'Log In'; authError.textContent = '';
   });
-
   tabSignup.addEventListener('click', () => {
-    isLoginMode = false;
-    tabSignup.classList.add('active');
-    tabLogin.classList.remove('active');
-    authSubmitBtn.textContent = 'Create Account';
-    authError.textContent = '';
+    isLoginMode = false; tabSignup.classList.add('active'); tabLogin.classList.remove('active');
+    authSubmitBtn.textContent = 'Create Account'; authError.textContent = '';
   });
-
   authForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    authError.textContent = '';
-    authSubmitBtn.textContent = 'Please wait...';
-    
-    const email = authEmail.value;
-    const password = authPassword.value;
-
+    e.preventDefault(); authError.textContent = ''; authSubmitBtn.textContent = 'Please wait...';
+    const email = authEmail.value, password = authPassword.value;
     try {
-      if (isLoginMode) {
-        await signInWithEmailAndPassword(auth, email, password);
-      } else {
-        await createUserWithEmailAndPassword(auth, email, password);
-      }
+      if (isLoginMode) await signInWithEmailAndPassword(auth, email, password);
+      else await createUserWithEmailAndPassword(auth, email, password);
     } catch (err) {
       authError.textContent = err.message.replace('Firebase: ', '');
       authSubmitBtn.textContent = isLoginMode ? 'Log In' : 'Create Account';
     }
   });
-
-  logoutBtn.addEventListener('click', () => {
-    signOut(auth);
-  });
+  logoutBtn.addEventListener('click', () => signOut(auth));
 
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       currentUser = user;
       authScreen.classList.add('hidden');
-      appScreen.classList.remove('hidden');
+      mainApp.classList.remove('hidden');
+      loadingScreen.classList.add('hidden');
       await loadDataFromCloud();
     } else {
       currentUser = null;
-      appScreen.classList.add('hidden');
+      mainApp.classList.add('hidden');
       authScreen.classList.remove('hidden');
       loadingScreen.classList.add('hidden');
       authSubmitBtn.textContent = isLoginMode ? 'Log In' : 'Create Account';
-      // Clear local data state
-      fields = []; entries = []; fieldColors = {};
+      fields = []; entries = []; fieldColors = []; pnlStreams = [];
     }
   });
 
   // ==========================================
-  // CLOUD SYNC LOGIC
+  // CLOUD SYNC
   // ==========================================
-
   async function saveToCloud() {
     if (!currentUser) return;
     try {
       await setDoc(doc(db, "users", currentUser.uid), {
-        fields, entries, fieldColors,
+        fields, entries, fieldColors, pnlStreams,
         lastUpdated: new Date().toISOString()
       });
-    } catch (e) {
-      console.error("Error saving to cloud: ", e);
-    }
+    } catch (e) { console.error("Error saving to cloud: ", e); }
   }
 
   async function loadDataFromCloud() {
@@ -600,32 +508,30 @@
         fields = data.fields || [];
         entries = data.entries || [];
         fieldColors = data.fieldColors || {};
+        pnlStreams = data.pnlStreams || []; // Load P&L data
       } else {
-        // Brand new user: check if they have local data to push
+        // Brand new user - check local storage
         const localF = localStorage.getItem('bm_fields_v5');
         if (localF) {
           fields = JSON.parse(localF) || [];
           fieldColors = JSON.parse(localStorage.getItem('bm_field_colors_v5')) || {};
           entries = JSON.parse(localStorage.getItem('bm_entries_v5')) || [];
-          await saveToCloud(); // Push local to cloud
-          alert("Existing local data found and synced to your new cloud account!");
+          await saveToCloud();
         }
       }
       
-      // Update local storage cache just in case
       localStorage.setItem('bm_fields_v5', JSON.stringify(fields));
       localStorage.setItem('bm_entries_v5', JSON.stringify(entries));
       localStorage.setItem('bm_field_colors_v5', JSON.stringify(fieldColors));
 
-      loadingScreen.classList.add('hidden');
       renderAll();
+      renderPnl(); // Render P&L page
     } catch (e) {
       console.error("Error loading from cloud:", e);
       alert("Failed to load data from cloud. Check your internet.");
     }
   }
 
-  // Save data locally AND to the cloud whenever changes are made
   function saveData() {
     localStorage.setItem('bm_fields_v5', JSON.stringify(fields));
     localStorage.setItem('bm_entries_v5', JSON.stringify(entries));
@@ -634,9 +540,8 @@
   }
 
   // ==========================================
-  // EXISTING APP LOGIC (UPDATED FOR CLOUD)
+  // BUDGET APP LOGIC (UNTOUCHED)
   // ==========================================
-
   function esc(s) {
     return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
@@ -674,16 +579,14 @@
     totalDisplay.textContent = money(total);
     totalDisplay.classList.toggle('negative', total < 0);
   }
-
   function renderBreakdown() {
     const allFields = allFieldNames();
-    if (allFields.length === 0) { fieldTotalsBreakdown.innerHTML = '<div class="breakdown-empty">No fields yet.</div>'; return; }
+    if (allFields.length === 0) { fieldTotalsBreakdown.innerHTML = '<div class="empty">No fields yet.</div>'; return; }
     fieldTotalsBreakdown.innerHTML = allFields.map(f => {
       const t = fieldTotal(f), col = colorFor(f);
-      return `<div class="breakdown-row"><span class="label"><span class="color-dot" style="background:${col}"></span>${esc(f)}</span><span class="amt ${t < 0 ? 'negative' : ''}">${money(t)}</span></div>`;
+      return `<div style="display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0.75rem; background: #f6f9fe; border-radius: 0.7rem; margin-bottom: 0.4rem; font-size: 0.95rem;"><span style="font-weight: 500; display: flex; align-items: center; gap: 0.5rem;"><span style="width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.1); background:${col}"></span>${esc(f)}</span><span style="font-weight: 700; color: ${t < 0 ? '#d14b4b' : '#1d3b5c'}">${money(t)}</span></div>`;
     }).join('');
   }
-
   function renderFields() {
     const allFields = allFieldNames();
     if (allFields.length === 0) { fieldList.innerHTML = '<div class="empty">No fields yet — add one above 👆</div>'; return; }
@@ -691,53 +594,45 @@
       const isUserField = fields.includes(f);
       const count = entries.filter(e => e.fieldName === f).length;
       const total = fieldTotal(f), col = colorFor(f);
-      return `<div class="field-item" style="border-left-color:${col}">
-        <div class="left"><div class="name">📌 ${esc(f)}</div><div class="meta">${count} entr${count === 1 ? 'y' : 'ies'}</div></div>
-        <div class="field-total ${total < 0 ? 'negative' : ''}">${money(total)}</div>
-        <div class="actions">${isUserField ? `<button class="edit-field-btn" data-color-field="${esc(f)}" title="Change color">🎨</button><button class="delete-btn" data-field="${esc(f)}" title="Delete field">✕</button>` : ''}</div>
+      return `<div style="display: flex; justify-content: space-between; align-items: center; background: #f6f9fe; padding: 0.75rem 0.9rem; border-radius: 0.8rem; margin-bottom: 0.5rem; border-left: 5px solid ${col};">
+        <div style="display: flex; flex-direction: column; gap: 0.15rem; flex: 1; min-width: 0;"><div style="font-weight: 600; word-break: break-word; display: flex; align-items: center; gap: 0.4rem;">📌 ${esc(f)}</div><div style="font-size: 0.75rem; color: #6d839b;">${count} entr${count === 1 ? 'y' : 'ies'}</div></div>
+        <div style="font-weight: 700; color: ${total < 0 ? '#d14b4b' : '#1d3b5c'}; font-size: 0.95rem; white-space: nowrap; margin-left: 0.5rem;">${money(total)}</div>
+        <div style="display: flex; gap: 0.4rem; align-items: center; margin-left: 0.5rem;">${isUserField ? `<button class="edit-field-btn" data-color-field="${esc(f)}" title="Change color" style="background: #e8f0fb; border: none; color: #1d3b5c; font-size: 0.85rem; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;">🎨</button><button class="delete-btn" data-field="${esc(f)}" title="Delete field" style="background: #ffeaea; border: none; color: #d14b4b; font-size: 0.9rem; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>` : ''}</div>
       </div>`;
     }).join('');
   }
-
   function renderWallets() {
     const wallets = discoverWallets();
     if (wallets.length === 0) { walletList.innerHTML = '<div class="empty">No wallets yet — add a "Wallet" value to an entry.</div>'; return; }
     walletList.innerHTML = wallets.map(w => {
       const count = entries.filter(e => e.wallet === w).length, total = walletTotal(w);
-      return `<div class="wallet-item"><div class="wallet-info"><div class="wallet-name">💼 ${esc(w)}</div><div class="wallet-count">${count} entr${count === 1 ? 'y' : 'ies'}</div></div><div class="wallet-total ${total < 0 ? 'negative' : ''}">${money(total)}</div></div>`;
+      return `<div style="display: flex; justify-content: space-between; align-items: center; background: #eaf7ea; padding: 0.75rem 0.9rem; border-radius: 0.8rem; margin-bottom: 0.5rem; border-left: 4px solid #2d7a2d;"><div style="flex: 1; min-width: 0;"><div style="font-weight: 600; color: #1e5a1e; word-break: break-word;">💼 ${esc(w)}</div><div style="font-size: 0.75rem; color: #4d8a4d;">${count} entr${count === 1 ? 'y' : 'ies'}</div></div><div style="font-weight: 700; color: ${total < 0 ? '#d14b4b' : '#2d7a2d'}; white-space: nowrap; margin-left: 0.5rem; font-size: 0.95rem;">${money(total)}</div></div>`;
     }).join('');
   }
-
   function renderSelect() {
     const cur = fieldSelect.value;
     fieldSelect.innerHTML = '<option value="">— No field —</option>' + fields.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
     if (fields.includes(cur)) fieldSelect.value = cur;
     walletSuggestions.innerHTML = discoverWallets().map(w => `<option value="${esc(w)}">`).join('');
   }
-
   function renderFilters() {
     const allFields = allFieldNames();
     const curFF = filterField.value;
     filterField.innerHTML = '<option value="">Filter: All fields</option>' + allFields.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
     if (allFields.includes(curFF)) filterField.value = curFF;
-
     const wallets = discoverWallets();
     const curFW = filterWallet.value;
     filterWallet.innerHTML = '<option value="">Filter: All wallets</option>' + wallets.map(w => `<option value="${esc(w)}">${esc(w)}</option>`).join('');
     if (wallets.includes(curFW)) filterWallet.value = curFW;
   }
-
   function renderTrans() {
     let filtered = [...entries];
     if (filterField.value) filtered = filtered.filter(e => (e.fieldName || '') === filterField.value);
     if (filterWallet.value) filtered = filtered.filter(e => (e.wallet || '') === filterWallet.value);
-
     if (filtered.length === 0) {
       const active = filterField.value || filterWallet.value;
-      transList.innerHTML = `<div class="empty">${active ? 'No entries match this filter.' : 'No entries yet — add your first above 👆'}</div>`;
-      return;
+      transList.innerHTML = `<div class="empty">${active ? 'No entries match this filter.' : 'No entries yet — add your first above 👆'}</div>`; return;
     }
-
     const sorted = filtered.sort((a,b) => { const da = a.date || '', db = b.date || ''; return da === db ? 0 : (da < db ? 1 : -1); });
     transList.innerHTML = sorted.map(e => {
       const amtRaw = e.amount, hasAmount = amtRaw !== '' && amtRaw !== null && amtRaw !== undefined && !isNaN(Number(amtRaw));
@@ -761,7 +656,7 @@
 
   function renderAll() { renderTotal(); renderBreakdown(); renderFields(); renderWallets(); renderSelect(); renderFilters(); renderTrans(); }
 
-  // Actions
+  // Budget Actions
   function createField(name, color) {
     const n = name.trim();
     if (!n) return alert('Please enter a field name.');
@@ -769,46 +664,30 @@
     fields.push(n); fieldColors[n] = color || '#1d3b5c';
     saveData(); renderAll(); newField.value = ''; newFieldColor.value = '#1d3b5c';
   }
-
   function deleteField(name) {
     if (!confirm(`Delete field "${name}" and ALL its entries?`)) return;
-    fields = fields.filter(f => f !== name);
-    entries = entries.filter(e => (e.fieldName || '') !== name);
-    delete fieldColors[name];
-    saveData();
-    if (editingId && !entries.find(e => e.id === editingId)) cancelEdit();
-    renderAll();
+    fields = fields.filter(f => f !== name); entries = entries.filter(e => (e.fieldName || '') !== name); delete fieldColors[name];
+    saveData(); if (editingId && !entries.find(e => e.id === editingId)) cancelEdit(); renderAll();
   }
-
   function deleteEntry(id) {
-    entries = entries.filter(e => e.id !== id);
-    saveData();
-    if (editingId === id) cancelEdit();
-    renderAll();
+    entries = entries.filter(e => e.id !== id); saveData(); if (editingId === id) cancelEdit(); renderAll();
   }
-
   function startEdit(id) {
-    const e = entries.find(x => x.id === id);
-    if (!e) return;
+    const e = entries.find(x => x.id === id); if (!e) return;
     editingId = id; fieldSelect.value = e.fieldName || ''; amount.value = (e.amount === '' || e.amount === null) ? '' : e.amount;
     wallet.value = e.wallet || ''; desc.value = e.description || ''; date.value = e.date || '';
-    formTitle.textContent = '✏️ Edit Entry'; submitBtn.textContent = 'Save Changes';
-    editingBanner.style.display = 'flex'; formError.textContent = '';
+    formTitle.textContent = '✏️ Edit Entry'; submitBtn.textContent = 'Save Changes'; editingBanner.style.display = 'flex'; formError.textContent = '';
     $('entryForm').scrollIntoView({ behavior: 'smooth', block: 'center' }); renderTrans();
   }
-
   function cancelEdit() {
     editingId = null; fieldSelect.value = ''; amount.value = ''; wallet.value = ''; desc.value = '';
-    formTitle.textContent = '➕ Add Entry'; submitBtn.textContent = 'Add Entry';
-    editingBanner.style.display = 'none'; formError.textContent = ''; renderTrans();
+    formTitle.textContent = '➕ Add Entry'; submitBtn.textContent = 'Add Entry'; editingBanner.style.display = 'none'; formError.textContent = ''; renderTrans();
   }
-
   function saveEntry() {
     const fieldName = fieldSelect.value.trim(), amtRaw = amount.value.trim(), walletVal = wallet.value.trim(), descVal = desc.value.trim(), dateVal = date.value;
     let amtNum = null;
     if (amtRaw !== '') { amtNum = parseFloat(amtRaw); if (isNaN(amtNum)) { formError.textContent = 'Amount must be a valid number.'; return; } }
     if (!fieldName && amtRaw === '' && !walletVal && !descVal && !dateVal) { formError.textContent = 'Add at least one thing.'; return; }
-
     if (editingId) {
       const idx = entries.findIndex(x => x.id === editingId);
       if (idx !== -1) entries[idx] = { ...entries[idx], fieldName: fieldName || '', amount: amtNum !== null ? amtNum : '', wallet: walletVal || '', description: descVal || '', date: dateVal || '' };
@@ -816,58 +695,55 @@
       entries.push({ id: uid(), fieldName: fieldName || '', amount: amtNum !== null ? amtNum : '', wallet: walletVal || '', description: descVal || '', date: dateVal || '' });
     }
     saveData(); formError.textContent = '';
-    if (editingId) cancelEdit();
-    else { amount.value = ''; wallet.value = ''; desc.value = ''; if (!date.value) date.value = new Date().toISOString().slice(0,10); }
+    if (editingId) cancelEdit(); else { amount.value = ''; wallet.value = ''; desc.value = ''; if (!date.value) date.value = new Date().toISOString().slice(0,10); }
     renderAll();
   }
+
+  // Color Modal Logic
+  const colorModal = $('colorModal'); const colorModalTitle = $('colorModalTitle'); const colorGrid = $('colorGrid');
+  const customColorPick = $('customColorPick'); const customColorHex = $('customColorHex');
+  const colorCancelBtn = $('colorCancelBtn'); const colorSaveBtn = $('colorSaveBtn');
+  let modalTargetField = null; let modalSelectedColor = '#1d3b5c';
 
   function openColorModal(fieldName) {
     modalTargetField = fieldName; modalSelectedColor = fieldColors[fieldName] || '#1d3b5c';
     colorModalTitle.textContent = `Color for "${fieldName}"`; renderColorGrid();
-    customColorPick.value = modalSelectedColor; customColorHex.textContent = modalSelectedColor;
-    colorModal.classList.remove('hidden');
+    customColorPick.value = modalSelectedColor; customColorHex.textContent = modalSelectedColor; colorModal.classList.remove('hidden');
   }
   function renderColorGrid() { colorGrid.innerHTML = PALETTE.map(c => `<div class="color-swatch ${c.toLowerCase() === modalSelectedColor.toLowerCase() ? 'selected' : ''}" style="background:${c}" data-color="${c}"></div>`).join(''); }
   function closeColorModal() { colorModal.classList.add('hidden'); modalTargetField = null; }
   function saveColorModal() { if (!modalTargetField) return; fieldColors[modalTargetField] = modalSelectedColor; saveData(); closeColorModal(); renderAll(); }
 
+  // CSV/Backup
   function csvEscape(v) { const s = String(v == null ? '' : v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
   function exportCSV() {
     if (entries.length === 0) return alert('No entries to export.');
     const rows = [['Date', 'Field', 'Amount', 'Wallet', 'Description'].map(csvEscape).join(',')];
     const sorted = [...entries].sort((a,b) => { const da = a.date || '', db = b.date || ''; return da === db ? 0 : (da < db ? 1 : -1); });
     sorted.forEach(e => { rows.push([e.date || '', e.fieldName || '', (e.amount !== '' && e.amount !== null) ? Number(e.amount).toFixed(2) : '', e.wallet || '', e.description || ''].map(csvEscape).join(',')); });
-    rows.push(''); rows.push(['--- SUMMARY ---'].map(csvEscape).join(','));
-    rows.push(['Grand Total', '', grandTotal().toFixed(2)].map(csvEscape).join(','));
-    rows.push(''); rows.push(['Field Totals'].map(csvEscape).join(','));
-    allFieldNames().forEach(f => { rows.push([f, '', fieldTotal(f).toFixed(2)].map(csvEscape).join(',')); });
-    rows.push(''); rows.push(['Wallet Totals'].map(csvEscape).join(','));
-    discoverWallets().forEach(w => { rows.push([w, '', walletTotal(w).toFixed(2)].map(csvEscape).join(',')); });
     const blob = new Blob(['\uFEFF' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `budget-export-${new Date().toISOString().slice(0,10)}.csv`; a.click();
   }
-
   function backup() {
-    const data = { fields, entries, fieldColors, exported: new Date().toISOString(), version: 10 };
+    const data = { fields, entries, fieldColors, pnlStreams, exported: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `budget-backup-${new Date().toISOString().slice(0,10)}.json`; a.click();
   }
-
   function restore(file) {
     const reader = new FileReader();
     reader.onload = e => {
       try {
         const data = JSON.parse(e.target.result);
         if (!Array.isArray(data.fields) || !Array.isArray(data.entries)) throw new Error('Invalid backup file');
-        if (!confirm('This will REPLACE all current fields and entries. Continue?')) return;
-        fields = data.fields; entries = data.entries; fieldColors = data.fieldColors || {};
-        saveData(); cancelEdit(); renderAll(); alert('✅ Restored successfully!');
+        if (!confirm('This will REPLACE all current data. Continue?')) return;
+        fields = data.fields; entries = data.entries; fieldColors = data.fieldColors || {}; pnlStreams = data.pnlStreams || [];
+        saveData(); cancelEdit(); renderAll(); renderPnl(); alert('✅ Restored successfully!');
       } catch (err) { alert('❌ Could not restore: ' + err.message); }
     };
     reader.readAsText(file);
   }
 
-  // Event Listeners
+  // Budget Event Listeners
   createFieldBtn.addEventListener('click', () => createField(newField.value, newFieldColor.value));
   newField.addEventListener('keypress', e => { if (e.key === 'Enter') { e.preventDefault(); createField(newField.value, newFieldColor.value); } });
   fieldList.addEventListener('click', e => {
@@ -887,39 +763,205 @@
   backupBtn.addEventListener('click', backup);
   restoreBtn.addEventListener('click', () => restoreFile.click());
   restoreFile.addEventListener('change', e => { const f = e.target.files[0]; if (f) restore(f); e.target.value = ''; });
-  
   colorGrid.addEventListener('click', e => { const sw = e.target.closest('.color-swatch'); if (sw) { modalSelectedColor = sw.dataset.color; customColorPick.value = modalSelectedColor; customColorHex.textContent = modalSelectedColor; renderColorGrid(); } });
   customColorPick.addEventListener('input', () => { modalSelectedColor = customColorPick.value; customColorHex.textContent = modalSelectedColor; renderColorGrid(); });
   colorCancelBtn.addEventListener('click', closeColorModal);
   colorSaveBtn.addEventListener('click', saveColorModal);
   colorModal.addEventListener('click', e => { if (e.target === colorModal) closeColorModal(); });
 
-  // Initialize date
+
+  // ==========================================
+  // P&L APP LOGIC
+  // ==========================================
+  function pnlMonthName(monthStr) {
+    const [year, month] = monthStr.split('-');
+    const d = new Date(year, parseInt(month) - 1, 1);
+    return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  }
+
+  function changeMonth(offset) {
+    const [year, month] = currentPnlMonth.split('-').map(Number);
+    const d = new Date(year, month - 1 + offset, 1);
+    currentPnlMonth = d.toISOString().slice(0, 7);
+    renderPnl();
+  }
+
+  pnlPrevMonth.addEventListener('click', () => changeMonth(-1));
+  pnlNextMonth.addEventListener('click', () => changeMonth(1));
+
+  function createStream() {
+    const name = newStreamName.value.trim();
+    if (!name) return alert('Please enter a stream name.');
+    if (pnlStreams.some(s => s.name.toLowerCase() === name.toLowerCase())) return alert('Stream already exists.');
+    
+    pnlStreams.push({ id: uid(), name, entries: [] });
+    newStreamName.value = '';
+    saveData();
+    renderPnl();
+  }
+  createStreamBtn.addEventListener('click', createStream);
+  newStreamName.addEventListener('keypress', e => { if (e.key === 'Enter') { e.preventDefault(); createStream(); } });
+
+  function deleteStream(id) {
+    if (!confirm('Delete this stream and ALL its entries?')) return;
+    pnlStreams = pnlStreams.filter(s => s.id !== id);
+    saveData();
+    renderPnl();
+  }
+
+  function addPnlEntry(streamId) {
+    const form = document.getElementById(`pnlForm-${streamId}`);
+    const amount = parseFloat(form.querySelector('.pnl-amount').value) || 0;
+    const desc = form.querySelector('.pnl-desc').value.trim();
+    const wallet = form.querySelector('.pnl-wallet').value.trim();
+    const date = form.querySelector('.pnl-date').value || currentPnlMonth + '-01'; // default to 1st of selected month
+
+    const stream = pnlStreams.find(s => s.id === streamId);
+    if (stream) {
+      stream.entries.push({ id: uid(), amount, description: desc, wallet, date });
+      saveData();
+      renderPnl();
+    }
+  }
+
+  function deletePnlEntry(streamId, entryId) {
+    const stream = pnlStreams.find(s => s.id === streamId);
+    if (stream) {
+      stream.entries = stream.entries.filter(e => e.id !== entryId);
+      saveData();
+      renderPnl();
+    }
+  }
+
+  function renderPnl() {
+    pnlMonthDisplay.textContent = pnlMonthName(currentPnlMonth);
+
+    // Calculate total for month
+    let monthTotal = 0;
+    const monthWalletTotals = {};
+
+    pnlStreams.forEach(stream => {
+      stream.entries.forEach(e => {
+        if (e.date.startsWith(currentPnlMonth)) {
+          const amt = Number(e.amount) || 0;
+          monthTotal += amt;
+          
+          const w = e.wallet.trim() || 'Unassigned';
+          monthWalletTotals[w] = (monthWalletTotals[w] || 0) + amt;
+        }
+      });
+    });
+
+    pnlTotalDisplay.textContent = money(monthTotal);
+    pnlTotalDisplay.classList.toggle('negative', monthTotal < 0);
+
+    // Render Streams
+    if (pnlStreams.length === 0) {
+      pnlStreamsList.innerHTML = '<div class="empty">No income streams yet. Create one above! 👆</div>';
+    } else {
+      pnlStreamsList.innerHTML = pnlStreams.map(stream => {
+        // Filter entries for this month
+        const monthEntries = stream.entries.filter(e => e.date.startsWith(currentPnlMonth));
+        const streamTotal = monthEntries.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+
+        const entriesHtml = monthEntries.length === 0 
+          ? '<div style="font-size: 0.85rem; color: #9aa9b9; font-style: italic; padding: 0.5rem 0;">No entries this month.</div>'
+          : monthEntries.map(e => `
+            <div class="transaction" style="padding: 0.6rem 0.8rem; margin-bottom: 0.4rem;">
+              <div class="trans-info">
+                <div class="trans-desc" style="font-size: 0.9rem;">${e.description ? esc(e.description) : '<span style="color:#9aa9b9;font-style:italic;">No description</span>'}</div>
+                ${e.wallet ? `<span class="trans-wallet" style="font-size: 0.7rem;">💼 ${esc(e.wallet)}</span>` : ''}
+                <div class="trans-date">📅 ${fmtDate(e.date)}</div>
+              </div>
+              <div class="trans-right">
+                <span class="trans-amount ${e.amount < 0 ? 'negative' : ''}" style="font-size: 0.95rem;">${money(e.amount)}</span>
+                <button class="delete-btn" onclick="window.deletePnlEntry('${stream.id}', '${e.id}')" style="width: 26px; height: 26px; font-size: 0.8rem;">✕</button>
+              </div>
+            </div>
+          `).join('');
+
+        return `
+          <div class="stream-card">
+            <div class="stream-header">
+              <div class="stream-name">${esc(stream.name)}</div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div class="stream-total ${streamTotal < 0 ? 'negative' : ''}">${money(streamTotal)}</div>
+                <button class="delete-btn" onclick="window.deleteStream('${stream.id}')" title="Delete Stream" style="width: 26px; height: 26px; font-size: 0.8rem;">✕</button>
+              </div>
+            </div>
+            
+            <div style="margin-bottom: 0.5rem;">${entriesHtml}</div>
+
+            <!-- Inline Add Entry Form -->
+            <div class="pnl-entry-form" id="pnlForm-${stream.id}">
+              <div style="font-size: 0.75rem; font-weight: 700; color: #1d3b5c; text-transform: uppercase;">Add Entry for ${pnlMonthName(currentPnlMonth)}</div>
+              <input type="number" class="pnl-amount" placeholder="Amount (e.g. 500 or -50 or 0)" step="0.01">
+              <input type="text" class="pnl-desc" placeholder="Description (optional)">
+              <input type="text" class="pnl-wallet" placeholder="Wallet (optional)">
+              <input type="date" class="pnl-date" value="${currentPnlMonth}-01">
+              <button class="btn" onclick="window.addPnlEntry('${stream.id}')">+ Add Entry</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Render Wallet Totals
+    const wallets = Object.keys(monthWalletTotals).sort();
+    if (wallets.length === 0) {
+      pnlWalletSummary.style.display = 'none';
+    } else {
+      pnlWalletSummary.style.display = 'block';
+      pnlWalletRows.innerHTML = wallets.map(w => {
+        const t = monthWalletTotals[w];
+        return `<div class="pnl-wallet-row"><span>💼 ${esc(w)}</span><span class="amt ${t < 0 ? 'negative' : ''}">${money(t)}</span></div>`;
+      }).join('');
+    }
+  }
+
+  // Expose P&L functions to window for inline HTML onclick handlers
+  window.deleteStream = deleteStream;
+  window.addPnlEntry = addPnlEntry;
+  window.deletePnlEntry = deletePnlEntry;
+
+  // Initialize
   date.value = new Date().toISOString().slice(0,10);
 </script>
+
+<!-- COLOR MODAL (Kept at bottom) -->
+<div class="modal-overlay hidden" id="colorModal">
+  <div class="modal">
+    <h3 id="colorModalTitle">Pick a color</h3>
+    <div class="color-grid" id="colorGrid"></div>
+    <div class="custom-color-row">
+      <label>Custom:</label>
+      <input type="color" id="customColorPick" value="#1d3b5c">
+      <span id="customColorHex" style="font-family:monospace;font-size:0.9rem;">#1d3b5c</span>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="colorCancelBtn">Cancel</button>
+      <button class="btn" id="colorSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- SERVICE WORKER FOR INSTALL BUTTON -->
 <script>
-  // Register Service Worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js');
   }
-
-  // Install Button Logic
   let deferredPrompt;
   const installBtn = document.getElementById('installBtn');
-
   window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
+    e.preventDefault(); deferredPrompt = e;
     if (installBtn) installBtn.classList.remove('hidden');
   });
-
   if (installBtn) {
     installBtn.addEventListener('click', async () => {
       if (!deferredPrompt) return;
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
-      deferredPrompt = null;
-      installBtn.classList.add('hidden');
+      deferredPrompt = null; installBtn.classList.add('hidden');
     });
   }
 </script>
