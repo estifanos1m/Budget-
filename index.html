@@ -137,7 +137,13 @@
   .pnl-entry-form { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; background: #f8fafc; padding: 1rem; border-radius: 1rem; }
   .pnl-entry-form input, .pnl-entry-form select { padding: 0.6rem 0.8rem; font-size: 0.9rem; border-radius: 0.6rem; border: 1.5px solid #dbe2ea; background: white; }
   .pnl-entry-form .btn { padding: 0.6rem; font-size: 0.85rem; }
-  .pnl-split-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center; }
+  
+  .pnl-split-row { display: flex; gap: 0.4rem; margin-bottom: 0.5rem; align-items: center; }
+  .wallet-select-btn {
+    background: #e8f0fb; border: 1.5px solid #dbe2ea; color: #1d3b5c;
+    border-radius: 0.6rem; padding: 0 0.6rem; cursor: pointer;
+    font-size: 0.9rem; height: 38px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
   
   .pnl-wallet-summary { background: #eaf7ea; border-left: 5px solid #2d7a2d; border-radius: 1.25rem; padding: 1.25rem; margin-top: 2rem; margin-bottom: 2rem; box-shadow: 0 2px 8px rgba(10,37,64,0.06); }
   .pnl-wallet-row { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #c8e6c9; font-weight: 500; }
@@ -147,9 +153,6 @@
 </style>
 </head>
 <body>
-
-<!-- WALLET DATALIST (For quick selection) -->
-<datalist id="wallet-options"></datalist>
 
 <!-- LOADING SCREEN -->
 <div id="loadingScreen" style="text-align: center; padding: 3rem 1rem; color: #6d839b;">
@@ -479,9 +482,6 @@
       const count = entries.filter(e => e.wallet === wName).length, total = walletTotal(wName);
       return `<div style="display: flex; justify-content: space-between; align-items: center; background: #eaf7ea; padding: 0.75rem 0.9rem; border-radius: 0.8rem; margin-bottom: 0.5rem; border-left: 4px solid #2d7a2d;"><div style="flex: 1; min-width: 0;"><div style="font-weight: 600; color: #1e5a1e; word-break: break-word;">💼 ${esc(wName)}</div><div style="font-size: 0.75rem; color: #4d8a4d;">${count} entr${count === 1 ? 'y' : 'ies'}</div></div><div style="font-weight: 700; color: ${total < 0 ? '#d14b4b' : '#2d7a2d'}; white-space: nowrap; margin-left: 0.5rem; font-size: 0.95rem;">${money(total)}</div></div>`;
     }).join('');
-    
-    // Populate the datalist for quick selection
-    document.getElementById('wallet-options').innerHTML = w.map(wName => `<option value="${esc(wName)}">`).join('');
   }
 
   function renderAll() { renderTotal(); renderBreakdown(); renderFields(); renderWallets(); }
@@ -544,6 +544,23 @@
     renderPnl();
   };
 
+  window.openWalletPicker = function(btn) {
+    window.tempWalletInput = btn.previousElementSibling;
+    const wallets = discoverWallets();
+    const list = document.getElementById('walletPickerList');
+    if (wallets.length === 0) {
+      list.innerHTML = '<div style="text-align:center; color:#8a9cb0; padding: 1rem;">No wallets yet.<br>Just type a new one!</div>';
+    } else {
+      list.innerHTML = wallets.map(w => `<button type="button" class="btn btn-secondary" style="justify-content:flex-start; margin-bottom: 0.5rem;" onclick="window.selectWallet('${esc(w)}')">💼 ${esc(w)}</button>`).join('');
+    }
+    document.getElementById('walletPickerModal').classList.remove('hidden');
+  };
+
+  window.selectWallet = function(w) {
+    if (window.tempWalletInput) { window.tempWalletInput.value = w; }
+    document.getElementById('walletPickerModal').classList.add('hidden');
+  };
+
   function createStream() {
     const name = newStreamName.value.trim();
     if (!name) return alert('Enter stream name.');
@@ -570,8 +587,9 @@
     const newRow = document.createElement('div');
     newRow.className = 'pnl-split-row';
     newRow.innerHTML = `
-      <input type="number" class="pnl-amount" placeholder="Amount" step="0.01" style="flex:1;">
-      <input type="text" class="pnl-wallet" placeholder="Wallet" list="wallet-options" style="flex:1;">
+      <input type="number" class="pnl-amount" placeholder="Amount" step="0.01" style="flex:1; min-width: 70px;">
+      <input type="text" class="pnl-wallet" placeholder="Wallet" style="flex:1.5;">
+      <button type="button" class="wallet-select-btn" onclick="window.openWalletPicker(this)">▼</button>
       <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="width: 30px; height: 30px; padding: 0;">✕</button>
     `;
     container.appendChild(newRow);
@@ -696,8 +714,9 @@
                 
                 <div class="pnl-splits" id="splits-${stream.id}">
                   <div class="pnl-split-row">
-                    <input type="number" class="pnl-amount" placeholder="Amount" step="0.01">
-                    <input type="text" class="pnl-wallet" placeholder="Wallet" list="wallet-options">
+                    <input type="number" class="pnl-amount" placeholder="Amount" step="0.01" style="flex:1; min-width: 70px;">
+                    <input type="text" class="pnl-wallet" placeholder="Wallet" style="flex:1.5;">
+                    <button type="button" class="wallet-select-btn" onclick="window.openWalletPicker(this)">▼</button>
                   </div>
                 </div>
                 
@@ -738,6 +757,17 @@
       <button class="btn btn-secondary" id="colorCancelBtn">Cancel</button>
       <button class="btn" id="colorSaveBtn">Save</button>
     </div>
+  </div>
+</div>
+
+<!-- WALLET PICKER MODAL -->
+<div class="modal-overlay hidden" id="walletPickerModal">
+  <div class="modal">
+    <h3>Select Existing Wallet</h3>
+    <div id="walletPickerList" style="max-height: 300px; overflow-y: auto; margin-bottom: 1rem;">
+      <!-- Injected dynamically -->
+    </div>
+    <button class="btn btn-secondary" onclick="document.getElementById('walletPickerModal').classList.add('hidden')">Cancel</button>
   </div>
 </div>
 
