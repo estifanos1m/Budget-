@@ -96,7 +96,7 @@
   .field-create .color-input::-webkit-color-swatch { border: none; border-radius: 0.6rem; }
   .field-create .btn { width: auto; padding: 0.9rem 1.1rem; }
 
-  /* Transactions */
+  /* Transactions (Used in P&L) */
   .transaction {
     background: #f9fbfe; border-radius: 0.9rem; padding: 0.9rem 1rem; margin-bottom: 0.6rem;
     border: 1px solid #eef2f8; display: flex; justify-content: space-between; align-items: flex-start; gap: 0.6rem;
@@ -119,9 +119,8 @@
   .hidden { display: none !important; }
 
   /* --- P&L SPECIFIC STYLES --- */
-  .month-nav { display: flex; justify-content: space-between; align-items: center; background: #1d3b5c; color: white; padding: 0.8rem 1rem; border-radius: 1rem; margin-bottom: 1rem; }
-  .month-nav button { background: transparent; border: none; color: white; font-size: 1.5rem; cursor: pointer; padding: 0.5rem 1rem; touch-action: manipulation; }
-  .month-nav .month-title { font-weight: 700; font-size: 1.1rem; }
+  .month-nav { display: flex; justify-content: space-between; align-items: center; background: #1d3b5c; color: white; padding: 0.8rem; border-radius: 1rem; margin-bottom: 1rem; gap: 0.5rem; }
+  .month-nav select { background: #2d4d6e; color: white; border: none; font-weight: 700; font-size: 1rem; padding: 0.5rem; border-radius: 0.5rem; text-align: center; flex: 1; outline: none; -webkit-appearance: auto; }
   
   .stream-card { background: white; border-radius: 1.25rem; padding: 1.25rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(10,37,64,0.06); border-left: 5px solid #2ecc71; }
   .stream-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid #eef2f8; }
@@ -177,7 +176,7 @@
   
   <div class="swipe-wrapper" id="swipeWrapper">
     
-    <!-- PAGE 1: BUDGET MANAGER -->
+    <!-- PAGE 1: BUDGET MANAGER (Totals & Fields Only) -->
     <div class="page" id="budgetPage">
       <div class="container">
         <h1 style="justify-content: space-between;">
@@ -215,51 +214,6 @@
           </div>
         </div>
 
-        <div class="card">
-          <h2 id="formTitle">➕ Add Entry</h2>
-          <div id="editingBanner" style="background: #fff8e1; border: 1px solid #f5c842; padding: 0.6rem 0.9rem; border-radius: 0.7rem; margin-bottom: 0.75rem; font-size: 0.85rem; color: #7a5d00; display: flex; justify-content: space-between; align-items: center; display: none;">
-            <span>✏️ Editing entry...</span>
-            <button id="cancelEditBtn" style="background: transparent; border: none; color: #7a5d00; font-weight: 600; cursor: pointer; text-decoration: underline;">Cancel</button>
-          </div>
-          <form id="entryForm">
-            <div class="input-group">
-              <label>Field <span style="color: #9aa9b9; font-weight: 400; text-transform: none;">(optional)</span></label>
-              <select id="fieldSelect"><option value="">— No field —</option></select>
-            </div>
-            <div class="input-group">
-              <label>Amount ($) <span style="color: #9aa9b9; font-weight: 400; text-transform: none;">(optional, negatives OK)</span></label>
-              <input type="number" id="amount" step="0.01" placeholder="e.g. -50 or 100">
-            </div>
-            <div class="input-group">
-              <label>Wallet / Where placed <span style="color: #9aa9b9; font-weight: 400; text-transform: none;">(optional)</span></label>
-              <input type="text" id="wallet" placeholder="e.g. Cash, CBE" maxlength="40" list="walletSuggestions">
-              <datalist id="walletSuggestions"></datalist>
-            </div>
-            <div class="input-group">
-              <label>Description <span style="color: #9aa9b9; font-weight: 400; text-transform: none;">(optional)</span></label>
-              <textarea id="desc" placeholder="What was this for?" maxlength="120"></textarea>
-            </div>
-            <div class="input-group">
-              <label>Date <span style="color: #9aa9b9; font-weight: 400; text-transform: none;">(optional)</span></label>
-              <input type="date" id="date">
-            </div>
-            <button type="submit" class="btn" id="submitBtn">Add Entry</button>
-            <div class="error" id="formError"></div>
-          </form>
-        </div>
-
-        <div class="card">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-            <h2 style="margin: 0;">📋 Entries</h2>
-            <button class="btn btn-secondary btn-small" id="clearAllBtn">Clear All</button>
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.75rem;">
-            <select id="filterField" style="padding: 0.65rem 0.85rem; font-size: 0.9rem; border-radius: 0.7rem;"><option value="">Filter: All fields</option></select>
-            <select id="filterWallet" style="padding: 0.65rem 0.85rem; font-size: 0.9rem; border-radius: 0.7rem;"><option value="">Filter: All wallets</option></select>
-          </div>
-          <div id="transList"></div>
-        </div>
-
         <div class="card" style="margin-bottom: 80px;">
           <h2>📤 Export & Backup</h2>
           <div class="btn-row">
@@ -272,15 +226,18 @@
       </div>
     </div>
 
-    <!-- PAGE 2: P&L INCOME STREAMS -->
+    <!-- PAGE 2: P&L INCOME STREAMS (Where entries are added) -->
     <div class="page" id="pnlPage">
       <div class="container" style="padding-bottom: 80px;">
-        <h1>📈 Monthly P&L</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h1>📈 Monthly P&L</h1>
+          <button class="btn btn-secondary btn-small" id="clearAllBtn" style="font-size: 0.75rem; padding: 0.4rem 0.8rem; margin-bottom: 0.5rem;">Clear All Entries</button>
+        </div>
 
+        <!-- Month & Year Selection -->
         <div class="month-nav">
-          <button type="button" onclick="window.changeMonth(-1)">←</button>
-          <div class="month-title" id="pnlMonthDisplay">Month</div>
-          <button type="button" onclick="window.changeMonth(1)">→</button>
+          <select id="pnlMonthSelect"></select>
+          <select id="pnlYearSelect"></select>
         </div>
 
         <div class="total-card" style="background: linear-gradient(135deg, #2d7a2d, #1e5a1e);">
@@ -359,7 +316,7 @@
 
   let isLoginMode = true;
 
-  let fields = []; let fieldColors = {}; let entries = []; let editingId = null;
+  let fields = []; let fieldColors = {}; let entries = [];
   let pnlStreams = []; 
   let currentPnlMonth = new Date().toISOString().slice(0, 7); 
 
@@ -368,17 +325,32 @@
   const $ = id => document.getElementById(id);
   
   const totalDisplay = $('totalDisplay'); const newField = $('newField'); const newFieldColor = $('newFieldColor'); const createFieldBtn = $('createFieldBtn');
-  const fieldList = $('fieldList'); const walletList = $('walletList'); const fieldTotalsBreakdown = $('fieldTotalsBreakdown'); const fieldSelect = $('fieldSelect');
-  const entryForm = $('entryForm'); const amount = $('amount'); const wallet = $('wallet'); const walletSuggestions = $('walletSuggestions');
-  const desc = $('desc'); const date = $('date'); const formError = $('formError'); const formTitle = $('formTitle');
-  const submitBtn = $('submitBtn'); const editingBanner = $('editingBanner'); const cancelEditBtn = $('cancelEditBtn');
-  const transList = $('transList'); const clearAllBtn = $('clearAllBtn'); const exportCsvBtn = $('exportCsvBtn');
-  const backupBtn = $('backupBtn'); const restoreBtn = $('restoreBtn'); const restoreFile = $('restoreFile');
-  const filterField = $('filterField'); const filterWallet = $('filterWallet');
+  const fieldList = $('fieldList'); const walletList = $('walletList'); const fieldTotalsBreakdown = $('fieldTotalsBreakdown');
+  const exportCsvBtn = $('exportCsvBtn'); const backupBtn = $('backupBtn'); const restoreBtn = $('restoreBtn'); const restoreFile = $('restoreFile');
 
   const tabBudget = $('tabBudget'); const tabPnl = $('tabPnl'); const swipeWrapper = $('swipeWrapper');
-  const pnlMonthDisplay = $('pnlMonthDisplay'); const pnlTotalDisplay = $('pnlTotalDisplay'); const newStreamName = $('newStreamName'); const createStreamBtn = $('createStreamBtn');
+  const pnlTotalDisplay = $('pnlTotalDisplay'); const newStreamName = $('newStreamName'); const createStreamBtn = $('createStreamBtn');
   const pnlStreamsList = $('pnlStreamsList'); const pnlWalletSummary = $('pnlWalletSummary'); const pnlWalletRows = $('pnlWalletRows');
+  const pnlMonthSelect = $('pnlMonthSelect'); const pnlYearSelect = $('pnlYearSelect'); const clearAllBtn = $('clearAllBtn');
+
+  // Initialize Month/Year Selects
+  const monthsList = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  pnlMonthSelect.innerHTML = monthsList.map((m, i) => `<option value="${i+1}">${m}</option>`).join('');
+  const currentYear = new Date().getFullYear();
+  let yearsOptions = '';
+  for (let y = currentYear - 2; y <= currentYear + 5; y++) {
+    yearsOptions += `<option value="${y}">${y}</option>`;
+  }
+  pnlYearSelect.innerHTML = yearsOptions;
+
+  pnlMonthSelect.addEventListener('change', () => {
+    currentPnlMonth = `${pnlYearSelect.value}-${String(pnlMonthSelect.value).padStart(2, '0')}`;
+    renderPnl();
+  });
+  pnlYearSelect.addEventListener('change', () => {
+    currentPnlMonth = `${pnlYearSelect.value}-${String(pnlMonthSelect.value).padStart(2, '0')}`;
+    renderPnl();
+  });
 
   function goToPage(pageIndex) {
     if (pageIndex === 0) {
@@ -472,6 +444,7 @@
   function allFieldNames() { const set = new Set(fields); entries.forEach(e => { if (e.fieldName) set.add(e.fieldName); }); return Array.from(set); }
 
   function renderTotal() { const total = grandTotal(); totalDisplay.textContent = money(total); totalDisplay.classList.toggle('negative', total < 0); }
+  
   function renderBreakdown() {
     const allF = allFieldNames();
     if (!allF.length) { fieldTotalsBreakdown.innerHTML = '<div class="empty">No fields yet.</div>'; return; }
@@ -480,6 +453,7 @@
       return `<div style="display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0.75rem; background: #f6f9fe; border-radius: 0.7rem; margin-bottom: 0.4rem; font-size: 0.95rem;"><span style="font-weight: 500; display: flex; align-items: center; gap: 0.5rem;"><span style="width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.1); background:${col}"></span>${esc(f)}</span><span style="font-weight: 700; color: ${t < 0 ? '#d14b4b' : '#1d3b5c'}">${money(t)}</span></div>`;
     }).join('');
   }
+  
   function renderFields() {
     const allF = allFieldNames();
     if (!allF.length) { fieldList.innerHTML = '<div class="empty">No fields yet — add one above 👆</div>'; return; }
@@ -488,6 +462,7 @@
       return `<div style="display: flex; justify-content: space-between; align-items: center; background: #f6f9fe; padding: 0.75rem 0.9rem; border-radius: 0.8rem; margin-bottom: 0.5rem; border-left: 5px solid ${col};"><div style="display: flex; flex-direction: column; gap: 0.15rem; flex: 1; min-width: 0;"><div style="font-weight: 600; word-break: break-word; display: flex; align-items: center; gap: 0.4rem;">📌 ${esc(f)}</div><div style="font-size: 0.75rem; color: #6d839b;">${count} entr${count === 1 ? 'y' : 'ies'}</div></div><div style="font-weight: 700; color: ${total < 0 ? '#d14b4b' : '#1d3b5c'}; font-size: 0.95rem; white-space: nowrap; margin-left: 0.5rem;">${money(total)}</div><div style="display: flex; gap: 0.4rem; align-items: center; margin-left: 0.5rem;">${isUser ? `<button class="edit-field-btn" data-color-field="${esc(f)}" title="Change color" style="background: #e8f0fb; border: none; color: #1d3b5c; font-size: 0.85rem; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;">🎨</button><button class="delete-btn" data-field="${esc(f)}" title="Delete field" style="background: #ffeaea; border: none; color: #d14b4b; font-size: 0.9rem; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>` : ''}</div></div>`;
     }).join('');
   }
+  
   function renderWallets() {
     const w = discoverWallets();
     if (!w.length) { walletList.innerHTML = '<div class="empty">No wallets yet — add a "Wallet" value to an entry.</div>'; return; }
@@ -496,47 +471,20 @@
       return `<div style="display: flex; justify-content: space-between; align-items: center; background: #eaf7ea; padding: 0.75rem 0.9rem; border-radius: 0.8rem; margin-bottom: 0.5rem; border-left: 4px solid #2d7a2d;"><div style="flex: 1; min-width: 0;"><div style="font-weight: 600; color: #1e5a1e; word-break: break-word;">💼 ${esc(wName)}</div><div style="font-size: 0.75rem; color: #4d8a4d;">${count} entr${count === 1 ? 'y' : 'ies'}</div></div><div style="font-weight: 700; color: ${total < 0 ? '#d14b4b' : '#2d7a2d'}; white-space: nowrap; margin-left: 0.5rem; font-size: 0.95rem;">${money(total)}</div></div>`;
     }).join('');
   }
-  function renderSelect() {
-    const cur = fieldSelect.value;
-    fieldSelect.innerHTML = '<option value="">— No field —</option>' + fields.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
-    if (fields.includes(cur)) fieldSelect.value = cur;
-    walletSuggestions.innerHTML = discoverWallets().map(w => `<option value="${esc(w)}">`).join('');
-  }
-  function renderFilters() {
-    const allF = allFieldNames(), curFF = filterField.value;
-    filterField.innerHTML = '<option value="">Filter: All fields</option>' + allF.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
-    if (allF.includes(curFF)) filterField.value = curFF;
-    const w = discoverWallets(), curFW = filterWallet.value;
-    filterWallet.innerHTML = '<option value="">Filter: All wallets</option>' + w.map(wName => `<option value="${esc(wName)}">${esc(wName)}</option>`).join('');
-    if (w.includes(curFW)) filterWallet.value = curFW;
-  }
-  function renderTrans() {
-    let filtered = [...entries];
-    if (filterField.value) filtered = filtered.filter(e => (e.fieldName || '') === filterField.value);
-    if (filterWallet.value) filtered = filtered.filter(e => (e.wallet || '') === filterWallet.value);
-    if (!filtered.length) { const active = filterField.value || filterWallet.value; transList.innerHTML = `<div class="empty">${active ? 'No entries match this filter.' : 'No entries yet — add your first above 👆'}</div>`; return; }
-    const sorted = filtered.sort((a,b) => { const da = a.date || '', db = b.date || ''; return da === db ? 0 : (da < db ? 1 : -1); });
-    transList.innerHTML = sorted.map(e => {
-      const hasAmount = e.amount !== '' && e.amount !== null && e.amount !== undefined && !isNaN(Number(e.amount));
-      const amtNum = hasAmount ? Number(e.amount) : 0, dateStr = fmtDate(e.date), isEdit = editingId === e.id, col = e.fieldName ? colorFor(e.fieldName) : '#9aa9b9';
-      return `<div class="transaction ${isEdit ? 'editing' : ''}" style="border-left-color:${col}"><div class="trans-info">${e.fieldName ? `<span class="trans-field" style="background:${col}">${esc(e.fieldName)}</span>` : ''}${e.description ? `<div class="trans-desc">${esc(e.description)}</div>` : ''}${e.wallet ? `<span class="trans-wallet">💼 ${esc(e.wallet)}</span>` : ''}${dateStr ? `<div class="trans-date">📅 ${dateStr}</div>` : ''}${!e.fieldName && !e.description && !e.wallet && !dateStr && !hasAmount ? '<div class="trans-date">(empty entry)</div>' : ''}</div><div class="trans-right">${hasAmount ? `<span class="trans-amount ${amtNum < 0 ? 'negative' : ''}">${money(amtNum)}</span>` : '<span class="trans-amount" style="color:#9aa9b9;font-weight:400;font-size:0.85rem;">—</span>'}<button class="edit-btn" data-edit-id="${e.id}" title="Edit">✏️</button><button class="delete-btn" data-id="${e.id}" title="Delete">🗑️</button></div></div>`;
-    }).join('');
-  }
 
-  function renderAll() { renderTotal(); renderBreakdown(); renderFields(); renderWallets(); renderSelect(); renderFilters(); renderTrans(); }
+  function renderAll() { renderTotal(); renderBreakdown(); renderFields(); renderWallets(); }
 
-  function createField(name, color) { const n = name.trim(); if (!n) return alert('Enter field name.'); if (fields.some(f => f.toLowerCase() === n.toLowerCase())) return alert('Exists.'); fields.push(n); fieldColors[n] = color || '#1d3b5c'; saveData(); renderAll(); newField.value = ''; newFieldColor.value = '#1d3b5c'; }
-  function deleteField(name) { if (!confirm(`Delete "${name}" and ALL its entries?`)) return; fields = fields.filter(f => f !== name); entries = entries.filter(e => (e.fieldName || '') !== name); delete fieldColors[name]; saveData(); if (editingId && !entries.find(e => e.id === editingId)) cancelEdit(); renderAll(); }
-  function deleteEntry(id) { entries = entries.filter(e => e.id !== id); saveData(); if (editingId === id) cancelEdit(); renderAll(); }
-  function startEdit(id) { const e = entries.find(x => x.id === id); if (!e) return; editingId = id; fieldSelect.value = e.fieldName || ''; amount.value = (e.amount === '' || e.amount === null) ? '' : e.amount; wallet.value = e.wallet || ''; desc.value = e.description || ''; date.value = e.date || ''; formTitle.textContent = '✏️ Edit Entry'; submitBtn.textContent = 'Save Changes'; editingBanner.style.display = 'flex'; formError.textContent = ''; $('entryForm').scrollIntoView({ behavior: 'smooth', block: 'center' }); renderTrans(); }
-  function cancelEdit() { editingId = null; fieldSelect.value = ''; amount.value = ''; wallet.value = ''; desc.value = ''; formTitle.textContent = '➕ Add Entry'; submitBtn.textContent = 'Add Entry'; editingBanner.style.display = 'none'; formError.textContent = ''; renderTrans(); }
-  function saveEntry() {
-    const fieldName = fieldSelect.value.trim(), amtRaw = amount.value.trim(), walletVal = wallet.value.trim(), descVal = desc.value.trim(), dateVal = date.value;
-    let amtNum = null; if (amtRaw !== '') { amtNum = parseFloat(amtRaw); if (isNaN(amtNum)) { formError.textContent = 'Valid number required.'; return; } }
-    if (!fieldName && amtRaw === '' && !walletVal && !descVal && !dateVal) { formError.textContent = 'Add at least one thing.'; return; }
-    if (editingId) { const idx = entries.findIndex(x => x.id === editingId); if (idx !== -1) entries[idx] = { ...entries[idx], fieldName: fieldName || '', amount: amtNum !== null ? amtNum : '', wallet: walletVal || '', description: descVal || '', date: dateVal || '' }; }
-    else { entries.push({ id: uid(), fieldName: fieldName || '', amount: amtNum !== null ? amtNum : '', wallet: walletVal || '', description: descVal || '', date: dateVal || '' }); }
-    saveData(); formError.textContent = ''; if (editingId) cancelEdit(); else { amount.value = ''; wallet.value = ''; desc.value = ''; if (!date.value) date.value = new Date().toISOString().slice(0,10); } renderAll();
+  function createField(name, color) { const n = name.trim(); if (!n) return alert('Enter field name.'); if (fields.some(f => f.toLowerCase() === n.toLowerCase())) return alert('Exists.'); fields.push(n); fieldColors[n] = color || '#1d3b5c'; saveData(); renderAll(); renderPnl(); newField.value = ''; newFieldColor.value = '#1d3b5c'; }
+  
+  function deleteField(name) { 
+    if (!confirm(`Delete "${name}" and ALL its entries?`)) return; 
+    fields = fields.filter(f => f !== name); 
+    entries = entries.filter(e => (e.fieldName || '') !== name); 
+    pnlStreams.forEach(stream => { stream.entries = stream.entries.filter(e => (e.fieldName || '') !== name); });
+    delete fieldColors[name]; 
+    saveData(); 
+    renderAll(); 
+    renderPnl();
   }
 
   const colorModal = $('colorModal'); const colorModalTitle = $('colorModalTitle'); const colorGrid = $('colorGrid'); const customColorPick = $('customColorPick'); const customColorHex = $('customColorHex'); const colorCancelBtn = $('colorCancelBtn'); const colorSaveBtn = $('colorSaveBtn');
@@ -544,26 +492,22 @@
   function openColorModal(f) { modalTargetField = f; modalSelectedColor = fieldColors[f] || '#1d3b5c'; colorModalTitle.textContent = `Color for "${f}"`; renderColorGrid(); customColorPick.value = modalSelectedColor; customColorHex.textContent = modalSelectedColor; colorModal.classList.remove('hidden'); }
   function renderColorGrid() { colorGrid.innerHTML = PALETTE.map(c => `<div class="color-swatch ${c.toLowerCase() === modalSelectedColor.toLowerCase() ? 'selected' : ''}" style="background:${c}" data-color="${c}"></div>`).join(''); }
   function closeColorModal() { colorModal.classList.add('hidden'); modalTargetField = null; }
-  function saveColorModal() { if (!modalTargetField) return; fieldColors[modalTargetField] = modalSelectedColor; saveData(); closeColorModal(); renderAll(); }
+  function saveColorModal() { if (!modalTargetField) return; fieldColors[modalTargetField] = modalSelectedColor; saveData(); closeColorModal(); renderAll(); renderPnl(); }
 
   function csvEscape(v) { const s = String(v == null ? '' : v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
   function exportCSV() { if (!entries.length) return alert('No entries.'); const rows = [['Date', 'Field', 'Amount', 'Wallet', 'Description'].map(csvEscape).join(',')]; const sorted = [...entries].sort((a,b) => { const da = a.date || '', db = b.date || ''; return da === db ? 0 : (da < db ? 1 : -1); }); sorted.forEach(e => { rows.push([e.date || '', e.fieldName || '', (e.amount !== '' && e.amount !== null) ? Number(e.amount).toFixed(2) : '', e.wallet || '', e.description || ''].map(csvEscape).join(',')); }); const blob = new Blob(['\uFEFF' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `budget-export-${new Date().toISOString().slice(0,10)}.csv`; a.click(); }
   function backup() { const data = { fields, entries, fieldColors, pnlStreams, exported: new Date().toISOString() }; const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `budget-backup-${new Date().toISOString().slice(0,10)}.json`; a.click(); }
-  function restore(file) { const reader = new FileReader(); reader.onload = e => { try { const data = JSON.parse(e.target.result); if (!Array.isArray(data.fields) || !Array.isArray(data.entries)) throw new Error('Invalid file'); if (!confirm('REPLACE all data?')) return; fields = data.fields; entries = data.entries; fieldColors = data.fieldColors || {}; pnlStreams = data.pnlStreams || []; saveData(); cancelEdit(); renderAll(); renderPnl(); alert('✅ Restored!'); } catch (err) { alert('❌ Error: ' + err.message); } }; reader.readAsText(file); }
+  function restore(file) { const reader = new FileReader(); reader.onload = e => { try { const data = JSON.parse(e.target.result); if (!Array.isArray(data.fields) || !Array.isArray(data.entries)) throw new Error('Invalid file'); if (!confirm('REPLACE all data?')) return; fields = data.fields; entries = data.entries; fieldColors = data.fieldColors || {}; pnlStreams = data.pnlStreams || []; saveData(); renderAll(); renderPnl(); alert('✅ Restored!'); } catch (err) { alert('❌ Error: ' + err.message); } }; reader.readAsText(file); }
 
   createFieldBtn.addEventListener('click', () => createField(newField.value, newFieldColor.value));
   newField.addEventListener('keypress', e => { if (e.key === 'Enter') { e.preventDefault(); createField(newField.value, newFieldColor.value); } });
   fieldList.addEventListener('click', e => { const d = e.target.closest('.delete-btn[data-field]'); if (d) return deleteField(d.dataset.field); const c = e.target.closest('.edit-field-btn[data-color-field]'); if (c) return openColorModal(c.dataset.colorField); });
-  entryForm.addEventListener('submit', e => { e.preventDefault(); saveEntry(); });
-  transList.addEventListener('click', e => { const d = e.target.closest('.delete-btn[data-id]'); if (d) return deleteEntry(d.dataset.id); const ed = e.target.closest('.edit-btn[data-edit-id]'); if (ed) return startEdit(ed.dataset.editId); });
-  cancelEditBtn.addEventListener('click', cancelEdit);
-  filterField.addEventListener('change', renderTrans);
-  filterWallet.addEventListener('change', renderTrans);
-  clearAllBtn.addEventListener('click', () => { if (entries.length && confirm('Delete ALL entries?')) { entries = []; saveData(); cancelEdit(); renderAll(); } });
+  
   exportCsvBtn.addEventListener('click', exportCSV);
   backupBtn.addEventListener('click', backup);
   restoreBtn.addEventListener('click', () => restoreFile.click());
   restoreFile.addEventListener('change', e => { const f = e.target.files[0]; if (f) restore(f); e.target.value = ''; });
+  
   colorGrid.addEventListener('click', e => { const sw = e.target.closest('.color-swatch'); if (sw) { modalSelectedColor = sw.dataset.color; customColorPick.value = modalSelectedColor; customColorHex.textContent = modalSelectedColor; renderColorGrid(); } });
   customColorPick.addEventListener('input', () => { modalSelectedColor = customColorPick.value; customColorHex.textContent = modalSelectedColor; renderColorGrid(); });
   colorCancelBtn.addEventListener('click', closeColorModal);
@@ -573,13 +517,6 @@
   // P&L LOGIC
   function pnlMonthName(m) { const [y, mth] = m.split('-'); return new Date(y, parseInt(mth) - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }); }
   
-  function changeMonth(offset) { 
-    const [y, m] = currentPnlMonth.split('-').map(Number); 
-    currentPnlMonth = new Date(y, m - 1 + offset, 1).toISOString().slice(0, 7); 
-    renderPnl(); 
-  }
-  window.changeMonth = changeMonth;
-
   function createStream() {
     const name = newStreamName.value.trim();
     if (!name) return alert('Enter stream name.');
@@ -589,7 +526,16 @@
   createStreamBtn.addEventListener('click', createStream);
   newStreamName.addEventListener('keypress', e => { if (e.key === 'Enter') { e.preventDefault(); createStream(); } });
 
-  function deleteStream(id) { if (!confirm('Delete stream and ALL entries?')) return; pnlStreams = pnlStreams.filter(s => s.id !== id); saveData(); renderPnl(); }
+  function deleteStream(id) { 
+    if (!confirm('Delete stream and ALL entries?')) return; 
+    const stream = pnlStreams.find(s => s.id === id);
+    if (stream) {
+      const entryIds = stream.entries.map(e => e.id);
+      entries = entries.filter(e => !entryIds.includes(e.id)); 
+    }
+    pnlStreams = pnlStreams.filter(s => s.id !== id); 
+    saveData(); renderPnl(); renderAll();
+  }
 
   function addSplitRow(streamId) {
     const container = document.getElementById(`splits-${streamId}`);
@@ -621,30 +567,42 @@
       
       if (!isNaN(amount) || wallet) {
         if (stream) {
-          stream.entries.push({
+          const newEntry = {
             id: uid(),
             amount: isNaN(amount) ? 0 : amount,
             description: desc,
             fieldName: field,
             wallet: wallet,
-            date: date
-          });
+            date: date,
+            pnlStreamId: streamId
+          };
+          stream.entries.push(newEntry);
+          entries.push(newEntry);
           added = true;
         }
       }
     });
     
-    if (added) { saveData(); renderPnl(); } else { alert('Enter at least one amount or wallet.'); }
+    if (added) { saveData(); renderPnl(); renderAll(); } else { alert('Enter at least one amount or wallet.'); }
   }
 
   function deletePnlEntry(streamId, entryId) {
     const stream = pnlStreams.find(s => s.id === streamId);
-    if (stream) { stream.entries = stream.entries.filter(e => e.id !== entryId); saveData(); renderPnl(); }
+    if (stream) { 
+      stream.entries = stream.entries.filter(e => e.id !== entryId); 
+      entries = entries.filter(e => e.id !== entryId); 
+      saveData(); 
+      renderPnl(); 
+      renderAll();
+    }
   }
 
   function renderPnl() {
-    pnlMonthDisplay.textContent = pnlMonthName(currentPnlMonth);
     let monthTotal = 0; const monthWalletTotals = {};
+
+    const [yStr, mStr] = currentPnlMonth.split('-');
+    pnlYearSelect.value = yStr;
+    pnlMonthSelect.value = parseInt(mStr);
 
     pnlStreams.forEach(stream => {
       stream.entries.forEach(e => {
@@ -688,7 +646,6 @@
             </div>
             <div style="margin-bottom: 0.5rem;">${entriesHtml}</div>
             
-            <!-- P&L Entry Form -->
             <div class="pnl-entry-form" id="pnlForm-${stream.id}">
               <div style="font-size: 0.75rem; font-weight: 700; color: #1d3b5c; text-transform: uppercase;">Add Entry for ${pnlMonthName(currentPnlMonth)}</div>
               
@@ -725,12 +682,20 @@
     }
   }
 
+  clearAllBtn.addEventListener('click', () => {
+    if (entries.length === 0) return;
+    if (!confirm('Delete ALL entries across ALL streams? (Fields stay.)')) return;
+    entries = [];
+    pnlStreams.forEach(s => s.entries = []);
+    saveData();
+    renderPnl();
+    renderAll();
+  });
+
   window.deleteStream = deleteStream;
   window.addSplitRow = addSplitRow;
   window.savePnlEntry = savePnlEntry;
   window.deletePnlEntry = deletePnlEntry;
-
-  date.value = new Date().toISOString().slice(0,10);
 </script>
 
 <!-- COLOR MODAL -->
