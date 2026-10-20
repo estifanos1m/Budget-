@@ -84,7 +84,6 @@
   }
   .collapsible-card .accordion-header:active { background: #f4f8fc; }
   .collapsible-card .accordion-title { font-size: 1.1rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; color: #0a2540; }
-  .collapsible-card .accordion-icon { font-size: 0.75rem; color: #6d839b; width: 14px; text-align: center; }
   .collapsible-card .accordion-body { padding: 0 1.25rem 1.25rem 1.25rem; display: none; border-top: 1px solid #eef2f8; }
   .collapsible-card .accordion-body.open { display: block; padding-top: 1rem; }
 
@@ -255,10 +254,11 @@
           <div class="total-amount money-text" id="pnlTotalDisplay">$0.00</div>
         </div>
 
+        <!-- REMOVED THE ARROW SPAN HERE -->
         <div class="collapsible-card">
           <div class="accordion-header" onclick="window.toggleAccordion('createStreamBody', this)">
             <div class="accordion-title">
-              <span class="accordion-icon">▶</span> ➕ Create Income Stream
+              ➕ Create Income Stream
             </div>
           </div>
           <div class="accordion-body" id="createStreamBody">
@@ -294,10 +294,11 @@
           <div class="total-amount money-text" id="totalDisplay">$0.00</div>
         </div>
 
+        <!-- REMOVED THE ARROW SPANS FROM THESE CARDS TOO -->
         <div class="collapsible-card">
           <div class="accordion-header" onclick="window.toggleAccordion('fieldTotalsBody', this)">
             <div class="accordion-title">
-              <span class="accordion-icon">▶</span> 📂 Field Totals
+              📂 Field Totals
             </div>
           </div>
           <div class="accordion-body" id="fieldTotalsBody">
@@ -308,7 +309,7 @@
         <div class="collapsible-card">
           <div class="accordion-header" onclick="window.toggleAccordion('createFieldBody', this)">
             <div class="accordion-title">
-              <span class="accordion-icon">▶</span> 📂 Fields
+              📂 Fields
             </div>
           </div>
           <div class="accordion-body" id="createFieldBody">
@@ -324,7 +325,7 @@
         <div class="collapsible-card">
           <div class="accordion-header" onclick="window.toggleAccordion('walletListBody', this)">
             <div class="accordion-title">
-              <span class="accordion-icon">▶</span> 💼 Wallets
+              💼 Wallets
             </div>
           </div>
           <div class="accordion-body" id="walletListBody">
@@ -337,7 +338,7 @@
         <div class="collapsible-card" style="margin-bottom: 80px;">
           <div class="accordion-header" onclick="window.toggleAccordion('exportBody', this)">
             <div class="accordion-title">
-              <span class="accordion-icon">▶</span> 📤 Export & Backup
+              📤 Export & Backup
             </div>
           </div>
           <div class="accordion-body" id="exportBody">
@@ -445,6 +446,7 @@
     }
   });
 
+  // The toggle function is updated to safely handle missing arrows
   window.toggleAccordion = function(id, el) {
     const body = document.getElementById(id);
     const icon = el.querySelector('.accordion-icon');
@@ -1010,7 +1012,6 @@
         const { outcome } = await deferredPrompt.userChoice;
         deferredPrompt = null;
       }
-      // No popups, no alerts. If Chrome is blocking, it does nothing.
     });
   }
 </script>
