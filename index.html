@@ -150,6 +150,26 @@
   .pnl-wallet-row:last-child { border-bottom: none; }
   .pnl-wallet-row .amt { font-weight: 700; color: #2d7a2d; }
   .pnl-wallet-row .amt.negative { color: #d14b4b; }
+
+  /* Modal Fix */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(10,37,64,0.6);
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem; z-index: 9999;
+  }
+  .modal-overlay.hidden { display: none !important; }
+  .modal {
+    background: white; border-radius: 1.25rem;
+    padding: 1.5rem; max-width: 380px; width: 100%;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  }
+  .modal h3 { margin: 0 0 1rem; font-size: 1.1rem; }
+  .wallet-option {
+    padding: 0.8rem; background: #f4f8fc; border-radius: 0.8rem; 
+    margin-bottom: 0.5rem; font-weight: 600; color: #1d3b5c; 
+    cursor: pointer; border: 1.5px solid #dbe2ea; 
+    display: flex; align-items: center; gap: 0.5rem;
+  }
 </style>
 </head>
 <body>
@@ -287,6 +307,15 @@
     </div>
   </div>
 
+</div>
+
+<!-- WALLET PICKER MODAL (Moved outside main app for proper overlapping) -->
+<div class="modal-overlay hidden" id="walletPickerModal">
+  <div class="modal">
+    <h3>Select Existing Wallet</h3>
+    <div id="walletPickerList" style="max-height: 300px; overflow-y: auto; margin-bottom: 1rem;"></div>
+    <button class="btn btn-secondary" onclick="document.getElementById('walletPickerModal').classList.add('hidden')">Cancel</button>
+  </div>
 </div>
 
 <!-- FIREBASE SDK -->
@@ -535,6 +564,42 @@
   colorSaveBtn.addEventListener('click', saveColorModal);
   colorModal.addEventListener('click', e => { if (e.target === colorModal) closeColorModal(); });
 
+  // BULLETPROOF WALLET PICKER EVENT DELEGATION
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.wallet-select-btn');
+    if (btn) {
+      // Find the input directly before the button
+      const input = btn.parentElement.querySelector('.pnl-wallet');
+      window.tempWalletInput = input;
+      
+      const wallets = discoverWallets();
+      const list = document.getElementById('walletPickerList');
+      
+      if (wallets.length === 0) {
+        list.innerHTML = '<div style="text-align:center; color:#8a9cb0; padding: 1rem;">No wallets yet. Just type a new one!</div>';
+      } else {
+        list.innerHTML = wallets.map(w => `
+          <div class="wallet-option" data-wallet="${esc(w)}">
+            💼 ${esc(w)}
+          </div>
+        `).join('');
+      }
+      
+      document.getElementById('walletPickerModal').classList.remove('hidden');
+    }
+  });
+
+  document.getElementById('walletPickerList').addEventListener('click', (e) => {
+    const option = e.target.closest('.wallet-option');
+    if (option) {
+      const w = option.getAttribute('data-wallet');
+      if (window.tempWalletInput) {
+        window.tempWalletInput.value = w;
+      }
+      document.getElementById('walletPickerModal').classList.add('hidden');
+    }
+  });
+
   // P&L LOGIC
   function pnlMonthName(m) { const [y, mth] = m.split('-'); return new Date(y, parseInt(mth) - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }); }
   
@@ -542,23 +607,6 @@
     if (expandedStreams.has(id)) expandedStreams.delete(id);
     else expandedStreams.add(id);
     renderPnl();
-  };
-
-  window.openWalletPicker = function(btn) {
-    window.tempWalletInput = btn.previousElementSibling;
-    const wallets = discoverWallets();
-    const list = document.getElementById('walletPickerList');
-    if (wallets.length === 0) {
-      list.innerHTML = '<div style="text-align:center; color:#8a9cb0; padding: 1rem;">No wallets yet.<br>Just type a new one!</div>';
-    } else {
-      list.innerHTML = wallets.map(w => `<button type="button" class="btn btn-secondary" style="justify-content:flex-start; margin-bottom: 0.5rem;" onclick="window.selectWallet('${esc(w)}')">💼 ${esc(w)}</button>`).join('');
-    }
-    document.getElementById('walletPickerModal').classList.remove('hidden');
-  };
-
-  window.selectWallet = function(w) {
-    if (window.tempWalletInput) { window.tempWalletInput.value = w; }
-    document.getElementById('walletPickerModal').classList.add('hidden');
   };
 
   function createStream() {
@@ -589,7 +637,7 @@
     newRow.innerHTML = `
       <input type="number" class="pnl-amount" placeholder="Amount" step="0.01" style="flex:1; min-width: 70px;">
       <input type="text" class="pnl-wallet" placeholder="Wallet" style="flex:1.5;">
-      <button type="button" class="wallet-select-btn" onclick="window.openWalletPicker(this)">▼</button>
+      <button type="button" class="wallet-select-btn">▼</button>
       <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="width: 30px; height: 30px; padding: 0;">✕</button>
     `;
     container.appendChild(newRow);
@@ -716,7 +764,7 @@
                   <div class="pnl-split-row">
                     <input type="number" class="pnl-amount" placeholder="Amount" step="0.01" style="flex:1; min-width: 70px;">
                     <input type="text" class="pnl-wallet" placeholder="Wallet" style="flex:1.5;">
-                    <button type="button" class="wallet-select-btn" onclick="window.openWalletPicker(this)">▼</button>
+                    <button type="button" class="wallet-select-btn">▼</button>
                   </div>
                 </div>
                 
@@ -757,17 +805,6 @@
       <button class="btn btn-secondary" id="colorCancelBtn">Cancel</button>
       <button class="btn" id="colorSaveBtn">Save</button>
     </div>
-  </div>
-</div>
-
-<!-- WALLET PICKER MODAL -->
-<div class="modal-overlay hidden" id="walletPickerModal">
-  <div class="modal">
-    <h3>Select Existing Wallet</h3>
-    <div id="walletPickerList" style="max-height: 300px; overflow-y: auto; margin-bottom: 1rem;">
-      <!-- Injected dynamically -->
-    </div>
-    <button class="btn btn-secondary" onclick="document.getElementById('walletPickerModal').classList.add('hidden')">Cancel</button>
   </div>
 </div>
 
