@@ -122,11 +122,17 @@
   .month-nav { display: flex; justify-content: space-between; align-items: center; background: #1d3b5c; color: white; padding: 0.8rem; border-radius: 1rem; margin-bottom: 1rem; gap: 0.5rem; }
   .month-nav select { background: #2d4d6e; color: white; border: none; font-weight: 700; font-size: 1rem; padding: 0.5rem; border-radius: 0.5rem; text-align: center; flex: 1; outline: none; -webkit-appearance: auto; }
   
-  .stream-card { background: white; border-radius: 1.25rem; padding: 1.25rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(10,37,64,0.06); border-left: 5px solid #2ecc71; }
-  .stream-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid #eef2f8; }
+  .stream-card { background: white; border-radius: 1.25rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(10,37,64,0.06); border-left: 5px solid #2ecc71; overflow: hidden; }
+  .stream-header { display: flex; justify-content: space-between; align-items: center; padding: 1.25rem; cursor: pointer; user-select: none; transition: background 0.2s; }
+  .stream-header:active { background: #f4f8fc; }
+  .stream-title-row { display: flex; align-items: center; gap: 0.6rem; }
+  .expand-icon { font-size: 0.8rem; color: #6d839b; width: 16px; text-align: center; }
   .stream-name { font-weight: 700; font-size: 1.1rem; color: #0a2540; }
   .stream-total { font-weight: 700; font-size: 1.1rem; color: #2ecc71; }
   .stream-total.negative { color: #d14b4b; }
+  
+  .stream-body { padding: 0 1.25rem 1.25rem 1.25rem; border-top: 1px solid #eef2f8; display: none; }
+  .stream-body.open { display: block; padding-top: 1rem; }
   
   .pnl-entry-form { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; background: #f8fafc; padding: 1rem; border-radius: 1rem; }
   .pnl-entry-form input, .pnl-entry-form select { padding: 0.6rem 0.8rem; font-size: 0.9rem; border-radius: 0.6rem; border: 1.5px solid #dbe2ea; background: white; }
@@ -220,19 +226,17 @@
             <button class="btn btn-secondary" id="exportCsvBtn">📤 Export CSV</button>
             <button class="btn btn-secondary" id="backupBtn">⬇️ Backup</button>
             <button class="btn btn-secondary btn-full" id="restoreBtn">⬆️ Restore Backup</button>
+            <button class="btn btn-secondary btn-full" id="resetDataBtn" style="color: #d14b4b; border-color: #d14b4b; margin-top: 0.5rem;">🗑️ Reset ALL Data</button>
           </div>
           <input type="file" id="restoreFile" accept=".json" style="display:none">
         </div>
       </div>
     </div>
 
-    <!-- PAGE 2: P&L INCOME STREAMS (Where entries are added) -->
+    <!-- PAGE 2: P&L INCOME STREAMS -->
     <div class="page" id="pnlPage">
       <div class="container" style="padding-bottom: 80px;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <h1>📈 Monthly P&L</h1>
-          <button class="btn btn-secondary btn-small" id="clearAllBtn" style="font-size: 0.75rem; padding: 0.4rem 0.8rem; margin-bottom: 0.5rem;">Clear All Entries</button>
-        </div>
+        <h1>📈 Monthly P&L</h1>
 
         <!-- Month & Year Selection -->
         <div class="month-nav">
@@ -318,6 +322,7 @@
 
   let fields = []; let fieldColors = {}; let entries = [];
   let pnlStreams = []; 
+  let expandedStreams = new Set(); // Tracks which streams are expanded
   let currentPnlMonth = new Date().toISOString().slice(0, 7); 
 
   const PALETTE = ['#1d3b5c', '#d14b4b', '#e67e22', '#f39c12', '#f1c40f', '#2ecc71', '#27ae60', '#16a085', '#3498db', '#2980b9', '#9b59b6', '#8e44ad', '#e84393', '#fd79a8', '#636e72', '#34495e', '#b33939', '#6f1e51'];
@@ -327,11 +332,12 @@
   const totalDisplay = $('totalDisplay'); const newField = $('newField'); const newFieldColor = $('newFieldColor'); const createFieldBtn = $('createFieldBtn');
   const fieldList = $('fieldList'); const walletList = $('walletList'); const fieldTotalsBreakdown = $('fieldTotalsBreakdown');
   const exportCsvBtn = $('exportCsvBtn'); const backupBtn = $('backupBtn'); const restoreBtn = $('restoreBtn'); const restoreFile = $('restoreFile');
+  const resetDataBtn = $('resetDataBtn');
 
   const tabBudget = $('tabBudget'); const tabPnl = $('tabPnl'); const swipeWrapper = $('swipeWrapper');
   const pnlTotalDisplay = $('pnlTotalDisplay'); const newStreamName = $('newStreamName'); const createStreamBtn = $('createStreamBtn');
   const pnlStreamsList = $('pnlStreamsList'); const pnlWalletSummary = $('pnlWalletSummary'); const pnlWalletRows = $('pnlWalletRows');
-  const pnlMonthSelect = $('pnlMonthSelect'); const pnlYearSelect = $('pnlYearSelect'); const clearAllBtn = $('clearAllBtn');
+  const pnlMonthSelect = $('pnlMonthSelect'); const pnlYearSelect = $('pnlYearSelect');
 
   // Initialize Month/Year Selects
   const monthsList = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -508,6 +514,15 @@
   restoreBtn.addEventListener('click', () => restoreFile.click());
   restoreFile.addEventListener('change', e => { const f = e.target.files[0]; if (f) restore(f); e.target.value = ''; });
   
+  resetDataBtn.addEventListener('click', async () => {
+    if (!confirm('⚠️ WARNING: This will permanently delete ALL fields, entries, and streams from this device and the cloud. Are you sure?')) return;
+    fields = []; entries = []; pnlStreams = []; fieldColors = {};
+    expandedStreams.clear();
+    await saveToCloud();
+    renderAll(); renderPnl();
+    alert('🗑️ All data has been reset.');
+  });
+
   colorGrid.addEventListener('click', e => { const sw = e.target.closest('.color-swatch'); if (sw) { modalSelectedColor = sw.dataset.color; customColorPick.value = modalSelectedColor; customColorHex.textContent = modalSelectedColor; renderColorGrid(); } });
   customColorPick.addEventListener('input', () => { modalSelectedColor = customColorPick.value; customColorHex.textContent = modalSelectedColor; renderColorGrid(); });
   colorCancelBtn.addEventListener('click', closeColorModal);
@@ -517,6 +532,12 @@
   // P&L LOGIC
   function pnlMonthName(m) { const [y, mth] = m.split('-'); return new Date(y, parseInt(mth) - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }); }
   
+  window.toggleStream = function(id) {
+    if (expandedStreams.has(id)) expandedStreams.delete(id);
+    else expandedStreams.add(id);
+    renderPnl();
+  };
+
   function createStream() {
     const name = newStreamName.value.trim();
     if (!name) return alert('Enter stream name.');
@@ -534,6 +555,7 @@
       entries = entries.filter(e => !entryIds.includes(e.id)); 
     }
     pnlStreams = pnlStreams.filter(s => s.id !== id); 
+    expandedStreams.delete(id);
     saveData(); renderPnl(); renderAll();
   }
 
@@ -621,6 +643,8 @@
       pnlStreamsList.innerHTML = pnlStreams.map(stream => {
         const monthEntries = stream.entries.filter(e => e.date.startsWith(currentPnlMonth));
         const streamTotal = monthEntries.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+        const isExpanded = expandedStreams.has(stream.id);
+        
         const entriesHtml = !monthEntries.length ? '<div style="font-size: 0.85rem; color: #9aa9b9; font-style: italic; padding: 0.5rem 0;">No entries this month.</div>' : monthEntries.map(e => `
           <div class="transaction" style="padding: 0.6rem 0.8rem; margin-bottom: 0.4rem;">
             <div class="trans-info">
@@ -631,44 +655,50 @@
             </div>
             <div class="trans-right">
               <span class="trans-amount ${e.amount < 0 ? 'negative' : ''}" style="font-size: 0.95rem;">${money(e.amount)}</span>
-              <button class="delete-btn" onclick="window.deletePnlEntry('${stream.id}', '${e.id}')" style="width: 26px; height: 26px; font-size: 0.8rem;">✕</button>
+              <button class="delete-btn" onclick="event.stopPropagation(); window.deletePnlEntry('${stream.id}', '${e.id}')" style="width: 26px; height: 26px; font-size: 0.8rem;">✕</button>
             </div>
           </div>`).join('');
 
         return `
           <div class="stream-card">
-            <div class="stream-header">
-              <div class="stream-name">${esc(stream.name)}</div>
+            <div class="stream-header" onclick="window.toggleStream('${stream.id}')">
+              <div class="stream-title-row">
+                <span class="expand-icon">${isExpanded ? '▼' : '▶'}</span>
+                <div class="stream-name">${esc(stream.name)}</div>
+              </div>
               <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <div class="stream-total ${streamTotal < 0 ? 'negative' : ''}">${money(streamTotal)}</div>
-                <button class="delete-btn" onclick="window.deleteStream('${stream.id}')" title="Delete Stream" style="width: 26px; height: 26px; font-size: 0.8rem;">✕</button>
+                <button class="delete-btn" onclick="event.stopPropagation(); window.deleteStream('${stream.id}')" title="Delete Stream" style="width: 26px; height: 26px; font-size: 0.8rem;">✕</button>
               </div>
             </div>
-            <div style="margin-bottom: 0.5rem;">${entriesHtml}</div>
             
-            <div class="pnl-entry-form" id="pnlForm-${stream.id}">
-              <div style="font-size: 0.75rem; font-weight: 700; color: #1d3b5c; text-transform: uppercase;">Add Entry for ${pnlMonthName(currentPnlMonth)}</div>
+            <div class="stream-body ${isExpanded ? 'open' : ''}">
+              <div style="margin-bottom: 0.5rem;">${entriesHtml}</div>
               
-              <input type="text" class="pnl-desc" placeholder="Description (optional)">
-              
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                <select class="pnl-field">
-                  <option value="">— No field —</option>
-                  ${fields.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('')}
-                </select>
-                <input type="date" class="pnl-date" value="${currentPnlMonth}-01">
-              </div>
-              
-              <div class="pnl-splits" id="splits-${stream.id}">
-                <div class="pnl-split-row">
-                  <input type="number" class="pnl-amount" placeholder="Amount" step="0.01">
-                  <input type="text" class="pnl-wallet" placeholder="Wallet">
+              <div class="pnl-entry-form" id="pnlForm-${stream.id}">
+                <div style="font-size: 0.75rem; font-weight: 700; color: #1d3b5c; text-transform: uppercase;">Add Entry for ${pnlMonthName(currentPnlMonth)}</div>
+                
+                <input type="text" class="pnl-desc" placeholder="Description (optional)">
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                  <select class="pnl-field">
+                    <option value="">— No field —</option>
+                    ${fields.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('')}
+                  </select>
+                  <input type="date" class="pnl-date" value="${currentPnlMonth}-01">
                 </div>
-              </div>
-              
-              <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
-                <button type="button" class="btn btn-secondary btn-small" onclick="window.addSplitRow('${stream.id}')" style="flex: 1;">+ Add Wallet</button>
-                <button type="button" class="btn btn-small" onclick="window.savePnlEntry('${stream.id}')" style="flex: 1;">Save</button>
+                
+                <div class="pnl-splits" id="splits-${stream.id}">
+                  <div class="pnl-split-row">
+                    <input type="number" class="pnl-amount" placeholder="Amount" step="0.01">
+                    <input type="text" class="pnl-wallet" placeholder="Wallet">
+                  </div>
+                </div>
+                
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                  <button type="button" class="btn btn-secondary btn-small" onclick="window.addSplitRow('${stream.id}')" style="flex: 1;">+ Add Wallet</button>
+                  <button type="button" class="btn btn-small" onclick="window.savePnlEntry('${stream.id}')" style="flex: 1;">Save</button>
+                </div>
               </div>
             </div>
           </div>`;
@@ -681,16 +711,6 @@
       pnlWalletRows.innerHTML = wallets.map(w => `<div class="pnl-wallet-row"><span>💼 ${esc(w)}</span><span class="amt ${monthWalletTotals[w] < 0 ? 'negative' : ''}">${money(monthWalletTotals[w])}</span></div>`).join('');
     }
   }
-
-  clearAllBtn.addEventListener('click', () => {
-    if (entries.length === 0) return;
-    if (!confirm('Delete ALL entries across ALL streams? (Fields stay.)')) return;
-    entries = [];
-    pnlStreams.forEach(s => s.entries = []);
-    saveData();
-    renderPnl();
-    renderAll();
-  });
 
   window.deleteStream = deleteStream;
   window.addSplitRow = addSplitRow;
