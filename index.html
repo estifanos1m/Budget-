@@ -285,7 +285,8 @@
         <h1 style="justify-content: space-between;">
           <span>💰 Budget</span>
           <div style="display: flex; gap: 0.5rem;">
-            <button class="btn btn-secondary btn-small" id="installBtn" style="font-size: 0.75rem; padding: 0.4rem 0.8rem;">📥 Install</button>
+            <!-- INLINE ONCLICK ADDED HERE -->
+            <button class="btn btn-secondary btn-small" id="installBtn" onclick="window.handleInstallClick()" style="font-size: 0.75rem; padding: 0.4rem 0.8rem;">📥 Install</button>
             <button class="btn btn-secondary btn-small" id="logoutBtn" style="font-size: 0.75rem; padding: 0.4rem 0.8rem;">Log Out</button>
           </div>
         </h1>
@@ -369,6 +370,16 @@
 
 </div>
 
+<!-- ALREADY INSTALLED MODAL -->
+<div class="modal-overlay hidden" id="alreadyInstalledModal" style="display: none;">
+  <div class="modal">
+    <div style="font-size: 3rem; margin-bottom: 0.5rem;">✅</div>
+    <h3>Already Installed</h3>
+    <p>It looks like you already have this app installed! You can find the <b>Budget</b> icon on your home screen and open it from there.</p>
+    <button class="btn" onclick="document.getElementById('alreadyInstalledModal').style.display='none'">Awesome</button>
+  </div>
+</div>
+
 <!-- WALLET PICKER MODAL -->
 <div class="modal-overlay hidden" id="walletPickerModal">
   <div class="modal">
@@ -411,16 +422,6 @@
       <button class="btn btn-secondary" onclick="document.getElementById('editEntryModal').classList.add('hidden')">Cancel</button>
       <button class="btn" onclick="window.saveEditedEntry()">Save</button>
     </div>
-  </div>
-</div>
-
-<!-- ALREADY INSTALLED MODAL -->
-<div class="modal-overlay hidden" id="alreadyInstalledModal">
-  <div class="modal">
-    <div style="font-size: 3rem; margin-bottom: 0.5rem;">✅</div>
-    <h3>Already Installed</h3>
-    <p>It looks like you already have this app installed! You can find the <b>Budget</b> icon on your home screen and open it from there.</p>
-    <button class="btn" onclick="document.getElementById('alreadyInstalledModal').classList.add('hidden')">Awesome</button>
   </div>
 </div>
 
@@ -471,7 +472,6 @@
   let currentPnlYear = new Date().getFullYear().toString();
   let pnlViewMode = 'monthly';
 
-  // Edit state
   let editingPnlStreamId = null;
   let editingEntryId = null;
 
@@ -797,7 +797,6 @@
   colorSaveBtn.addEventListener('click', saveColorModal);
   colorModal.addEventListener('click', e => { if (e.target === colorModal) closeColorModal(); });
 
-  // WALLET PICKER EVENT DELEGATION
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('.wallet-select-btn');
     if (btn) {
@@ -927,7 +926,6 @@
     }
   }
 
-  // --- EDIT ENTRY FUNCTIONS ---
   window.openEditEntryModal = function(streamId, entryId) {
     editingPnlStreamId = streamId;
     editingEntryId = entryId;
@@ -1133,31 +1131,36 @@
   </div>
 </div>
 
+<!-- GLOBAL INSTALL FUNCTION -->
 <script>
+  window.deferredPrompt = null;
+  
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js');
   }
   
-  let deferredPrompt;
-  const installBtn = document.getElementById('installBtn');
-  
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault(); 
-    deferredPrompt = e;
+    window.deferredPrompt = e;
   });
   
-  if (installBtn) {
-    installBtn.addEventListener('click', async () => {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        deferredPrompt = null;
+  window.handleInstallClick = function() {
+    if (window.deferredPrompt) {
+      window.deferredPrompt.prompt();
+      window.deferredPrompt.userChoice.then((choiceResult) => {
+        window.deferredPrompt = null;
+      });
+    } else {
+      // Directly show the modal by changing inline style, bypassing all CSS classes
+      const modal = document.getElementById('alreadyInstalledModal');
+      if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
       } else {
-        // Show the beautiful "Already Installed" message
-        document.getElementById('alreadyInstalledModal').classList.remove('hidden');
+        alert("App is already installed.");
       }
-    });
-  }
+    }
+  };
 </script>
 </body>
 </html>
