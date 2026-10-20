@@ -254,7 +254,6 @@
           <div class="total-amount money-text" id="pnlTotalDisplay">$0.00</div>
         </div>
 
-        <!-- REMOVED THE ARROW SPAN HERE -->
         <div class="collapsible-card">
           <div class="accordion-header" onclick="window.toggleAccordion('createStreamBody', this)">
             <div class="accordion-title">
@@ -294,7 +293,6 @@
           <div class="total-amount money-text" id="totalDisplay">$0.00</div>
         </div>
 
-        <!-- REMOVED THE ARROW SPANS FROM THESE CARDS TOO -->
         <div class="collapsible-card">
           <div class="accordion-header" onclick="window.toggleAccordion('fieldTotalsBody', this)">
             <div class="accordion-title">
@@ -369,11 +367,48 @@
 
 </div>
 
+<!-- WALLET PICKER MODAL -->
 <div class="modal-overlay hidden" id="walletPickerModal">
   <div class="modal">
     <h3>Select Existing Wallet</h3>
     <div id="walletPickerList" style="max-height: 300px; overflow-y: auto; margin-bottom: 1rem;"></div>
     <button class="btn btn-secondary" onclick="document.getElementById('walletPickerModal').classList.add('hidden')">Cancel</button>
+  </div>
+</div>
+
+<!-- EDIT ENTRY MODAL -->
+<div class="modal-overlay hidden" id="editEntryModal">
+  <div class="modal">
+    <h3>Edit Entry</h3>
+    <div class="input-group">
+      <label>Description</label>
+      <input type="text" id="editDesc" placeholder="Description">
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+      <div class="input-group">
+        <label>Field</label>
+        <select id="editField"><option value="">— No field —</option></select>
+      </div>
+      <div class="input-group">
+        <label>Date</label>
+        <input type="date" id="editDate">
+      </div>
+    </div>
+    <div class="input-group">
+      <label>Amount</label>
+      <input type="number" id="editAmount" step="0.01">
+    </div>
+    <div class="input-group">
+      <label>Wallet</label>
+      <div style="display: flex; gap: 0.5rem;">
+        <input type="text" id="editWallet" placeholder="Wallet" style="flex: 1;">
+        <button type="button" class="wallet-select-btn" onclick="window.openWalletPickerForEdit()">▼</button>
+      </div>
+    </div>
+    <div class="btn-row" style="margin-top: 1rem;">
+      <button class="btn btn-secondary" onclick="document.getElementById('editEntryModal').classList.add('hidden')">Cancel</button>
+      <button class="btn" onclick="window.saveEditedEntry()">Save</button>
+    </div>
   </div>
 </div>
 
@@ -424,6 +459,10 @@
   let currentPnlYear = new Date().getFullYear().toString();
   let pnlViewMode = 'monthly';
 
+  // Edit state
+  let editingPnlStreamId = null;
+  let editingEntryId = null;
+
   const PALETTE = ['#1d3b5c', '#d14b4b', '#e67e22', '#f39c12', '#f1c40f', '#2ecc71', '#27ae60', '#16a085', '#3498db', '#2980b9', '#9b59b6', '#8e44ad', '#e84393', '#fd79a8', '#636e72', '#34495e', '#b33939', '#6f1e51'];
 
   const $ = id => document.getElementById(id);
@@ -446,7 +485,6 @@
     }
   });
 
-  // The toggle function is updated to safely handle missing arrows
   window.toggleAccordion = function(id, el) {
     const body = document.getElementById(id);
     const icon = el.querySelector('.accordion-icon');
@@ -747,11 +785,19 @@
   colorSaveBtn.addEventListener('click', saveColorModal);
   colorModal.addEventListener('click', e => { if (e.target === colorModal) closeColorModal(); });
 
+  // WALLET PICKER EVENT DELEGATION (Works for both Add and Edit forms)
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('.wallet-select-btn');
     if (btn) {
-      const input = btn.parentElement.querySelector('.pnl-wallet');
-      window.tempWalletInput = input;
+      // If it's the edit form button, we set the target manually in the button onclick.
+      // Otherwise, it's the add form button, so we find the sibling input.
+      if (btn.hasAttribute('data-for-edit')) {
+        window.tempWalletInput = document.getElementById('editWallet');
+      } else {
+        const input = btn.parentElement.querySelector('.pnl-wallet');
+        window.tempWalletInput = input;
+      }
+      
       const wallets = discoverWallets();
       const list = document.getElementById('walletPickerList');
       
@@ -871,6 +917,93 @@
     }
   }
 
+  // --- EDIT ENTRY FUNCTIONS ---
+  window.openEditEntryModal = function(streamId, entryId) {
+    editingPnlStreamId = streamId;
+    editingEntryId = entryId;
+    
+    const entry = entries.find(e => e.id === entryId);
+    if (!entry) return;
+
+    document.getElementById('editDesc').value = entry.description || '';
+    document.getElementById('editAmount').value = (entry.amount === '' || entry.amount === null) ? '' : entry.amount;
+    document.getElementById('editWallet').value = entry.wallet || '';
+    document.getElementById('editDate').value = entry.date || '';
+
+    const fieldSelect = document.getElementById('editField');
+    fieldSelect.innerHTML = '<option value="">— No field —</option>' + fields.map(f => `<option value="${esc(f)}" ${f === entry.fieldName ? 'selected' : ''}>${esc(f)}</option>`).join('');
+
+    document.getElementById('editEntryModal').classList.remove('hidden');
+  };
+
+  window.openWalletPickerForEdit = function() {
+    const wallets = discoverWallets();
+    const list = document.getElementById('walletPickerList');
+    
+    if (wallets.length === 0) {
+      list.innerHTML = '<div style="text-align:center; color:#8a9cb0; padding: 1rem;">No wallets yet. Just type a new one!</div>';
+    } else {
+      list.innerHTML = wallets.map(w => `
+        <div class="wallet-option" data-wallet="${esc(w)}">
+          💼 ${esc(w)}
+        </div>
+      `).join('');
+    }
+    // Set target input
+    window.tempWalletInput = document.getElementById('editWallet');
+    document.getElementById('walletPickerModal').classList.remove('hidden');
+  };
+
+  window.saveEditedEntry = function() {
+    const amountVal = document.getElementById('editAmount').value.trim();
+    const descVal = document.getElementById('editDesc').value.trim();
+    const fieldVal = document.getElementById('editField').value;
+    const walletVal = document.getElementById('editWallet').value.trim();
+    const dateVal = document.getElementById('editDate').value;
+
+    let amtNum = null;
+    if (amountVal !== '') {
+      amtNum = parseFloat(amountVal);
+      if (isNaN(amtNum)) {
+        alert('Please enter a valid amount.');
+        return;
+      }
+    }
+
+    if (!fieldVal && amountVal === '' && !walletVal && !descVal && !dateVal) {
+      alert('Entry cannot be completely empty.');
+      return;
+    }
+
+    // Update in main entries array
+    const entryIdx = entries.findIndex(e => e.id === editingEntryId);
+    if (entryIdx !== -1) {
+      entries[entryIdx].amount = amtNum !== null ? amtNum : '';
+      entries[entryIdx].description = descVal;
+      entries[entryIdx].fieldName = fieldVal;
+      entries[entryIdx].wallet = walletVal;
+      entries[entryIdx].date = dateVal;
+    }
+
+    // Update in specific stream array
+    const stream = pnlStreams.find(s => s.id === editingPnlStreamId);
+    if (stream) {
+      const streamEntryIdx = stream.entries.findIndex(e => e.id === editingEntryId);
+      if (streamEntryIdx !== -1) {
+        stream.entries[streamEntryIdx].amount = amtNum !== null ? amtNum : '';
+        stream.entries[streamEntryIdx].description = descVal;
+        stream.entries[streamEntryIdx].fieldName = fieldVal;
+        stream.entries[streamEntryIdx].wallet = walletVal;
+        stream.entries[streamEntryIdx].date = dateVal;
+      }
+    }
+
+    saveData();
+    renderPnl();
+    renderAll();
+    document.getElementById('editEntryModal').classList.add('hidden');
+  };
+
   function renderPnl() {
     let periodTotal = 0; const monthWalletTotals = {};
     const isYearly = pnlViewMode === 'yearly';
@@ -910,6 +1043,8 @@
             </div>
             <div class="trans-right">
               <span class="trans-amount money-text ${e.amount < 0 ? 'negative' : ''}" style="font-size: 0.95rem;">${money(e.amount)}</span>
+              <!-- NEW EDIT BUTTON -->
+              <button class="edit-btn" onclick="event.stopPropagation(); window.openEditEntryModal('${stream.id}', '${e.id}')" title="Edit Entry" style="width: 26px; height: 26px; font-size: 0.8rem;">✏️</button>
               <button class="delete-btn" onclick="event.stopPropagation(); window.deletePnlEntry('${stream.id}', '${e.id}')" style="width: 26px; height: 26px; font-size: 0.8rem;">✕</button>
             </div>
           </div>`).join('');
