@@ -1,16 +1,18 @@
 {
-  "name": "Budget & P&L Pro",
-  "short_name": "Budget Pro",
-  "start_url": "./index.html?v=2",
+  "id": "/Budget-/",
+  "name": "Budget & P&L",
+  "short_name": "Budget",
+  "start_url": "/Budget-/",
+  "scope": "/Budget-/",
   "display": "standalone",
   "background_color": "#f0f4fa",
   "theme_color": "#0a2540",
   "icons": [
     {
-      "src": "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/savings/default/512px.svg",
+      "src": "https://cdn-icons-png.flaticon.com/512/2489/2489756.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
