@@ -60,11 +60,20 @@
   .total-amount { font-size: 2.4rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
   .total-amount.negative { color: #ff9a9a; }
 
-  .card {
-    background: white; border-radius: 1.25rem; padding: 1.25rem; margin-bottom: 1rem;
-    box-shadow: 0 2px 8px rgba(10,37,64,0.06);
+  /* Collapsible Card (Replaces standard .card for lists) */
+  .collapsible-card {
+    background: white; border-radius: 1.25rem; margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(10,37,64,0.06); overflow: hidden;
   }
-  .card h2 { font-size: 1.1rem; margin: 0 0 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; }
+  .collapsible-card .accordion-header {
+    padding: 1.25rem; cursor: pointer; user-select: none; transition: background 0.2s;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .collapsible-card .accordion-header:active { background: #f4f8fc; }
+  .collapsible-card .accordion-title { font-size: 1.1rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; color: #0a2540; }
+  .collapsible-card .accordion-icon { font-size: 0.75rem; color: #6d839b; width: 14px; text-align: center; }
+  .collapsible-card .accordion-body { padding: 0 1.25rem 1.25rem 1.25rem; display: none; border-top: 1px solid #eef2f8; }
+  .collapsible-card .accordion-body.open { display: block; padding-top: 1rem; }
 
   input, select, textarea, button { font-family: inherit; font-size: 16px; }
   .input-group { margin-bottom: 0.9rem; }
@@ -96,7 +105,15 @@
   .field-create .color-input::-webkit-color-swatch { border: none; border-radius: 0.6rem; }
   .field-create .btn { width: auto; padding: 0.9rem 1.1rem; }
 
-  /* Transactions (Used in P&L) */
+  /* Accordion Lists inside the bodies */
+  .accordion-item { background: #f6f9fe; border-radius: 0.8rem; margin-bottom: 0.5rem; overflow: hidden; }
+  .accordion-header-inner { padding: 0.85rem 1rem; cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; }
+  .accordion-header-inner:active { background: #eef3fa; }
+  .accordion-title-inner { font-weight: 600; display: flex; align-items: center; gap: 0.5rem; font-size: 1rem; }
+  .accordion-body-inner { padding: 0 1rem 0.85rem 1rem; display: none; border-top: 1px solid rgba(0,0,0,0.05); }
+  .accordion-body-inner.open { display: block; padding-top: 0.75rem; }
+
+  /* Transactions */
   .transaction {
     background: #f9fbfe; border-radius: 0.9rem; padding: 0.9rem 1rem; margin-bottom: 0.6rem;
     border: 1px solid #eef2f8; display: flex; justify-content: space-between; align-items: flex-start; gap: 0.6rem;
@@ -119,6 +136,10 @@
   .hidden { display: none !important; }
 
   /* --- P&L SPECIFIC STYLES --- */
+  .view-toggle { display: flex; background: #e2eaf4; border-radius: 1rem; padding: 0.3rem; margin-bottom: 1rem; }
+  .view-btn { flex: 1; padding: 0.6rem; text-align: center; font-weight: 600; font-size: 0.9rem; color: #6d839b; border-radius: 0.8rem; cursor: pointer; transition: 0.2s; border: none; background: transparent; }
+  .view-btn.active { background: white; color: #1d3b5c; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+
   .month-nav { display: flex; justify-content: space-between; align-items: center; background: #1d3b5c; color: white; padding: 0.8rem; border-radius: 1rem; margin-bottom: 1rem; gap: 0.5rem; }
   .month-nav select { background: #2d4d6e; color: white; border: none; font-weight: 700; font-size: 1rem; padding: 0.5rem; border-radius: 0.5rem; text-align: center; flex: 1; outline: none; -webkit-appearance: auto; }
   
@@ -151,7 +172,7 @@
   .pnl-wallet-row .amt { font-weight: 700; color: #2d7a2d; }
   .pnl-wallet-row .amt.negative { color: #d14b4b; }
 
-  /* Modal Fix */
+  /* Modal */
   .modal-overlay {
     position: fixed; inset: 0; background: rgba(10,37,64,0.6);
     display: flex; align-items: center; justify-content: center;
@@ -208,7 +229,54 @@
   
   <div class="swipe-wrapper" id="swipeWrapper">
     
-    <!-- PAGE 1: BUDGET MANAGER -->
+    <!-- PAGE 1: P&L INCOME STREAMS (NOW ON THE LEFT) -->
+    <div class="page" id="pnlPage">
+      <div class="container" style="padding-bottom: 80px;">
+        <h1>📈 P&L Streams</h1>
+
+        <!-- View Toggle (Monthly / Yearly) -->
+        <div class="view-toggle">
+          <button class="view-btn active" id="viewMonthlyBtn">Monthly</button>
+          <button class="view-btn" id="viewYearlyBtn">Yearly</button>
+        </div>
+
+        <!-- Date Selection -->
+        <div class="month-nav">
+          <select id="pnlMonthSelect"></select>
+          <select id="pnlYearSelect"></select>
+        </div>
+
+        <div class="total-card" style="background: linear-gradient(135deg, #2d7a2d, #1e5a1e);">
+          <div class="total-label" id="pnlTotalLabel">Total Net P&L (This Month)</div>
+          <div class="total-amount" id="pnlTotalDisplay">$0.00</div>
+        </div>
+
+        <!-- Create Income Stream -->
+        <div class="collapsible-card">
+          <div class="accordion-header" onclick="window.toggleAccordion('createStreamBody', this)">
+            <div class="accordion-title">
+              <span class="accordion-icon">▶</span> ➕ Create Income Stream
+            </div>
+          </div>
+          <div class="accordion-body" id="createStreamBody">
+            <div class="field-create">
+              <input type="text" id="newStreamName" placeholder="e.g. Salary, Freelance" maxlength="30">
+              <button class="btn btn-small" id="createStreamBtn">+ Add Stream</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="pnlStreamsList"></div>
+
+        <div class="pnl-wallet-summary" id="pnlWalletSummary" style="display: none;">
+          <h3 style="margin: 0 0 1rem; font-size: 1rem; color: #1e5a1e;">💼 Wallet Totals (Selected Period)</h3>
+          <div id="pnlWalletRows"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- PAGE 2: BUDGET MANAGER (NOW ON THE RIGHT) -->
     <div class="page" id="budgetPage">
       <div class="container">
         <h1 style="justify-content: space-between;">
@@ -224,92 +292,86 @@
           <div class="total-amount" id="totalDisplay">$0.00</div>
         </div>
 
-        <div class="card">
-          <h3 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: #3d5772; margin: 0 0 0.75rem; font-weight: 700;">📂 Field Totals</h3>
-          <div id="fieldTotalsBreakdown"></div>
-        </div>
-
-        <div class="card">
-          <h2>📂 Fields</h2>
-          <div class="field-create">
-            <input type="text" id="newField" placeholder="e.g. Food, Rent" maxlength="30">
-            <input type="color" id="newFieldColor" class="color-input" value="#1d3b5c" title="Field color">
-            <button class="btn btn-small" id="createFieldBtn">+ Add</button>
+        <!-- Field Totals Breakdown -->
+        <div class="collapsible-card">
+          <div class="accordion-header" onclick="window.toggleAccordion('fieldTotalsBody', this)">
+            <div class="accordion-title">
+              <span class="accordion-icon">▶</span> 📂 Field Totals
+            </div>
           </div>
-          <div id="fieldList" style="margin-top: 1rem;"></div>
-        </div>
-
-        <div class="card">
-          <h2>💼 Wallets (auto)</h2>
-          <div id="walletList">
-            <div class="empty">No wallets yet — add a "Wallet" value to an entry.</div>
+          <div class="accordion-body" id="fieldTotalsBody">
+            <div id="fieldTotalsBreakdown"></div>
           </div>
         </div>
 
-        <div class="card" style="margin-bottom: 80px;">
-          <h2>📤 Export & Backup</h2>
-          <div class="btn-row">
-            <button class="btn btn-secondary" id="exportCsvBtn">📤 Export CSV</button>
-            <button class="btn btn-secondary" id="backupBtn">⬇️ Backup</button>
-            <button class="btn btn-secondary btn-full" id="restoreBtn">⬆️ Restore Backup</button>
-            <button class="btn btn-secondary btn-full" id="resetDataBtn" style="color: #d14b4b; border-color: #d14b4b; margin-top: 0.5rem;">🗑️ Reset ALL Data</button>
+        <!-- Fields -->
+        <div class="collapsible-card">
+          <div class="accordion-header" onclick="window.toggleAccordion('createFieldBody', this)">
+            <div class="accordion-title">
+              <span class="accordion-icon">▶</span> 📂 Fields
+            </div>
           </div>
-          <input type="file" id="restoreFile" accept=".json" style="display:none">
-        </div>
-      </div>
-    </div>
-
-    <!-- PAGE 2: P&L INCOME STREAMS -->
-    <div class="page" id="pnlPage">
-      <div class="container" style="padding-bottom: 80px;">
-        <h1>📈 Monthly P&L</h1>
-
-        <!-- Month & Year Selection -->
-        <div class="month-nav">
-          <select id="pnlMonthSelect"></select>
-          <select id="pnlYearSelect"></select>
-        </div>
-
-        <div class="total-card" style="background: linear-gradient(135deg, #2d7a2d, #1e5a1e);">
-          <div class="total-label">Total Net P&L (This Month)</div>
-          <div class="total-amount" id="pnlTotalDisplay">$0.00</div>
-        </div>
-
-        <div class="card">
-          <h2>➕ Create Income Stream</h2>
-          <div class="field-create">
-            <input type="text" id="newStreamName" placeholder="e.g. Salary, Freelance" maxlength="30">
-            <button class="btn btn-small" id="createStreamBtn">+ Add Stream</button>
+          <div class="accordion-body" id="createFieldBody">
+            <div class="field-create">
+              <input type="text" id="newField" placeholder="e.g. Food, Rent" maxlength="30">
+              <input type="color" id="newFieldColor" class="color-input" value="#1d3b5c" title="Field color">
+              <button class="btn btn-small" id="createFieldBtn">+ Add</button>
+            </div>
+            <div id="fieldList" style="margin-top: 1rem;"></div>
           </div>
         </div>
 
-        <div id="pnlStreamsList"></div>
-
-        <div class="pnl-wallet-summary" id="pnlWalletSummary" style="display: none;">
-          <h3 style="margin: 0 0 1rem; font-size: 1rem; color: #1e5a1e;">💼 Wallet Totals (This Month)</h3>
-          <div id="pnlWalletRows"></div>
+        <!-- Wallets -->
+        <div class="collapsible-card">
+          <div class="accordion-header" onclick="window.toggleAccordion('walletListBody', this)">
+            <div class="accordion-title">
+              <span class="accordion-icon">▶</span> 💼 Wallets
+            </div>
+          </div>
+          <div class="accordion-body" id="walletListBody">
+            <div id="walletList">
+              <div class="empty">No wallets yet — add a "Wallet" value to an entry.</div>
+            </div>
+          </div>
         </div>
 
+        <!-- Export & Backup -->
+        <div class="collapsible-card" style="margin-bottom: 80px;">
+          <div class="accordion-header" onclick="window.toggleAccordion('exportBody', this)">
+            <div class="accordion-title">
+              <span class="accordion-icon">▶</span> 📤 Export & Backup
+            </div>
+          </div>
+          <div class="accordion-body" id="exportBody">
+            <div class="btn-row">
+              <button class="btn btn-secondary" id="exportCsvBtn">📤 Export CSV</button>
+              <button class="btn btn-secondary" id="backupBtn">⬇️ Backup</button>
+              <button class="btn btn-secondary btn-full" id="restoreBtn">⬆️ Restore Backup</button>
+              <button class="btn btn-secondary btn-full" id="resetDataBtn" style="color: #d14b4b; border-color: #d14b4b; margin-top: 0.5rem;">🗑️ Reset ALL Data</button>
+            </div>
+            <input type="file" id="restoreFile" accept=".json" style="display:none">
+          </div>
+        </div>
       </div>
     </div>
 
   </div>
 
-  <!-- BOTTOM NAVIGATION TABS -->
+  <!-- BOTTOM NAVIGATION TABS (SWAPPED ORDER) -->
   <div class="bottom-tabs">
-    <div class="bottom-tab active" id="tabBudget">
-      <span class="icon">💰</span>
-      <span>Budget</span>
-    </div>
-    <div class="bottom-tab" id="tabPnl">
+    <div class="bottom-tab active" id="tabPnl">
       <span class="icon">📈</span>
       <span>P&L Streams</span>
+    </div>
+    <div class="bottom-tab" id="tabBudget">
+      <span class="icon">💰</span>
+      <span>Budget</span>
     </div>
   </div>
 
 </div>
 
-<!-- WALLET PICKER MODAL (Moved outside main app for proper overlapping) -->
+<!-- WALLET PICKER MODAL -->
 <div class="modal-overlay hidden" id="walletPickerModal">
   <div class="modal">
     <h3>Select Existing Wallet</h3>
@@ -357,8 +419,14 @@
 
   let fields = []; let fieldColors = {}; let entries = [];
   let pnlStreams = []; 
+  
+  let expandedFields = new Set();
+  let expandedWallets = new Set();
   let expandedStreams = new Set(); 
+
   let currentPnlMonth = new Date().toISOString().slice(0, 7); 
+  let currentPnlYear = new Date().getFullYear().toString();
+  let pnlViewMode = 'monthly';
 
   const PALETTE = ['#1d3b5c', '#d14b4b', '#e67e22', '#f39c12', '#f1c40f', '#2ecc71', '#27ae60', '#16a085', '#3498db', '#2980b9', '#9b59b6', '#8e44ad', '#e84393', '#fd79a8', '#636e72', '#34495e', '#b33939', '#6f1e51'];
 
@@ -370,47 +438,85 @@
   const resetDataBtn = $('resetDataBtn');
 
   const tabBudget = $('tabBudget'); const tabPnl = $('tabPnl'); const swipeWrapper = $('swipeWrapper');
-  const pnlTotalDisplay = $('pnlTotalDisplay'); const newStreamName = $('newStreamName'); const createStreamBtn = $('createStreamBtn');
+  const pnlTotalDisplay = $('pnlTotalDisplay'); const pnlTotalLabel = $('pnlTotalLabel');
+  const newStreamName = $('newStreamName'); const createStreamBtn = $('createStreamBtn');
   const pnlStreamsList = $('pnlStreamsList'); const pnlWalletSummary = $('pnlWalletSummary'); const pnlWalletRows = $('pnlWalletRows');
   const pnlMonthSelect = $('pnlMonthSelect'); const pnlYearSelect = $('pnlYearSelect');
+  const viewMonthlyBtn = $('viewMonthlyBtn'); const viewYearlyBtn = $('viewYearlyBtn');
 
-  // Initialize Month/Year Selects
+  // Helper for card accordions
+  window.toggleAccordion = function(id, el) {
+    const body = document.getElementById(id);
+    const icon = el.querySelector('.accordion-icon');
+    if (body.classList.contains('open')) {
+      body.classList.remove('open');
+      if (icon) icon.textContent = '▶';
+    } else {
+      body.classList.add('open');
+      if (icon) icon.textContent = '▼';
+    }
+  };
+
+  // Initialize 110 Years
   const monthsList = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   pnlMonthSelect.innerHTML = monthsList.map((m, i) => `<option value="${i+1}">${m}</option>`).join('');
+  
   const currentYear = new Date().getFullYear();
   let yearsOptions = '';
-  for (let y = currentYear - 2; y <= currentYear + 5; y++) {
+  for (let y = currentYear - 10; y <= currentYear + 100; y++) {
     yearsOptions += `<option value="${y}">${y}</option>`;
   }
   pnlYearSelect.innerHTML = yearsOptions;
+
+  // View Toggle Logic
+  viewMonthlyBtn.addEventListener('click', () => {
+    pnlViewMode = 'monthly';
+    viewMonthlyBtn.classList.add('active'); viewYearlyBtn.classList.remove('active');
+    pnlMonthSelect.style.display = 'block';
+    pnlTotalLabel.textContent = 'Total Net P&L (This Month)';
+    renderPnl();
+  });
+
+  viewYearlyBtn.addEventListener('click', () => {
+    pnlViewMode = 'yearly';
+    viewYearlyBtn.classList.add('active'); viewMonthlyBtn.classList.remove('active');
+    pnlMonthSelect.style.display = 'none';
+    pnlTotalLabel.textContent = 'Total Net P&L (This Year)';
+    renderPnl();
+  });
 
   pnlMonthSelect.addEventListener('change', () => {
     currentPnlMonth = `${pnlYearSelect.value}-${String(pnlMonthSelect.value).padStart(2, '0')}`;
     renderPnl();
   });
+  
   pnlYearSelect.addEventListener('change', () => {
+    currentPnlYear = pnlYearSelect.value;
     currentPnlMonth = `${pnlYearSelect.value}-${String(pnlMonthSelect.value).padStart(2, '0')}`;
     renderPnl();
   });
 
+  // UPDATED TAB LOGIC
   function goToPage(pageIndex) {
     if (pageIndex === 0) {
-      tabBudget.classList.add('active'); tabPnl.classList.remove('active');
+      // P&L (Left)
+      tabPnl.classList.add('active'); tabBudget.classList.remove('active');
       setTimeout(() => { swipeWrapper.scrollTo({ left: 0, behavior: 'smooth' }); }, 10);
     } else {
-      tabPnl.classList.add('active'); tabBudget.classList.remove('active');
+      // Budget (Right)
+      tabBudget.classList.add('active'); tabPnl.classList.remove('active');
       setTimeout(() => { swipeWrapper.scrollTo({ left: window.innerWidth, behavior: 'smooth' }); }, 10);
     }
   }
 
-  tabBudget.addEventListener('click', () => goToPage(0));
-  tabPnl.addEventListener('click', () => goToPage(1));
+  tabPnl.addEventListener('click', () => goToPage(0));
+  tabBudget.addEventListener('click', () => goToPage(1));
   
   swipeWrapper.addEventListener('scroll', () => {
     if (swipeWrapper.scrollLeft > window.innerWidth / 2) {
-      tabPnl.classList.add('active'); tabBudget.classList.remove('active');
-    } else {
       tabBudget.classList.add('active'); tabPnl.classList.remove('active');
+    } else {
+      tabPnl.classList.add('active'); tabBudget.classList.remove('active');
     }
   });
 
@@ -498,31 +604,83 @@
   function renderFields() {
     const allF = allFieldNames();
     if (!allF.length) { fieldList.innerHTML = '<div class="empty">No fields yet — add one above 👆</div>'; return; }
+    
     fieldList.innerHTML = allF.map(f => {
-      const isUser = fields.includes(f), count = entries.filter(e => e.fieldName === f).length, total = fieldTotal(f), col = colorFor(f);
-      return `<div style="display: flex; justify-content: space-between; align-items: center; background: #f6f9fe; padding: 0.75rem 0.9rem; border-radius: 0.8rem; margin-bottom: 0.5rem; border-left: 5px solid ${col};"><div style="display: flex; flex-direction: column; gap: 0.15rem; flex: 1; min-width: 0;"><div style="font-weight: 600; word-break: break-word; display: flex; align-items: center; gap: 0.4rem;">📌 ${esc(f)}</div><div style="font-size: 0.75rem; color: #6d839b;">${count} entr${count === 1 ? 'y' : 'ies'}</div></div><div style="font-weight: 700; color: ${total < 0 ? '#d14b4b' : '#1d3b5c'}; font-size: 0.95rem; white-space: nowrap; margin-left: 0.5rem;">${money(total)}</div><div style="display: flex; gap: 0.4rem; align-items: center; margin-left: 0.5rem;">${isUser ? `<button class="edit-field-btn" data-color-field="${esc(f)}" title="Change color" style="background: #e8f0fb; border: none; color: #1d3b5c; font-size: 0.85rem; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;">🎨</button><button class="delete-btn" data-field="${esc(f)}" title="Delete field" style="background: #ffeaea; border: none; color: #d14b4b; font-size: 0.9rem; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>` : ''}</div></div>`;
+      const isUser = fields.includes(f);
+      const count = entries.filter(e => e.fieldName === f).length;
+      const total = fieldTotal(f);
+      const col = colorFor(f);
+      const isExpanded = expandedFields.has(f);
+
+      return `
+        <div class="accordion-item" style="border-left: 5px solid ${col};">
+          <div class="accordion-header-inner" onclick="window.toggleField('${esc(f)}')">
+            <div class="accordion-title-inner">
+              <span class="accordion-icon">${isExpanded ? '▼' : '▶'}</span> 📌 ${esc(f)}
+            </div>
+          </div>
+          <div class="accordion-body-inner ${isExpanded ? 'open' : ''}">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 0.25rem;">
+              <div style="font-size: 0.75rem; color: #6d839b;">${count} entr${count === 1 ? 'y' : 'ies'}</div>
+              <div style="font-weight: 700; color: ${total < 0 ? '#d14b4b' : '#1d3b5c'}; font-size: 0.95rem;">${money(total)}</div>
+              <div style="display: flex; gap: 0.4rem;">
+                ${isUser ? `<button class="edit-field-btn" onclick="event.stopPropagation(); window.openColorModal('${esc(f)}')" title="Change color" style="background: #e8f0fb; border: none; color: #1d3b5c; font-size: 0.85rem; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;">🎨</button><button class="delete-btn" onclick="event.stopPropagation(); window.deleteField('${esc(f)}')" title="Delete field" style="background: #ffeaea; border: none; color: #d14b4b; font-size: 0.9rem; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>` : ''}
+              </div>
+            </div>
+          </div>
+        </div>`;
     }).join('');
   }
-  
+
   function renderWallets() {
     const w = discoverWallets();
     if (!w.length) { walletList.innerHTML = '<div class="empty">No wallets yet — add a "Wallet" value to an entry.</div>'; return; }
+    
     walletList.innerHTML = w.map(wName => {
-      const count = entries.filter(e => e.wallet === wName).length, total = walletTotal(wName);
-      return `<div style="display: flex; justify-content: space-between; align-items: center; background: #eaf7ea; padding: 0.75rem 0.9rem; border-radius: 0.8rem; margin-bottom: 0.5rem; border-left: 4px solid #2d7a2d;"><div style="flex: 1; min-width: 0;"><div style="font-weight: 600; color: #1e5a1e; word-break: break-word;">💼 ${esc(wName)}</div><div style="font-size: 0.75rem; color: #4d8a4d;">${count} entr${count === 1 ? 'y' : 'ies'}</div></div><div style="font-weight: 700; color: ${total < 0 ? '#d14b4b' : '#2d7a2d'}; white-space: nowrap; margin-left: 0.5rem; font-size: 0.95rem;">${money(total)}</div></div>`;
+      const count = entries.filter(e => e.wallet === wName).length;
+      const total = walletTotal(wName);
+      const isExpanded = expandedWallets.has(wName);
+
+      return `
+        <div class="accordion-item" style="border-left: 4px solid #2d7a2d; background: #eaf7ea;">
+          <div class="accordion-header-inner" onclick="window.toggleWallet('${esc(wName)}')">
+            <div class="accordion-title-inner" style="color: #1e5a1e;">
+              <span class="accordion-icon" style="color: #4d8a4d;">${isExpanded ? '▼' : '▶'}</span> 💼 ${esc(wName)}
+            </div>
+          </div>
+          <div class="accordion-body-inner ${isExpanded ? 'open' : ''}" style="border-top-color: #c8e6c9;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 0.25rem;">
+              <div style="font-size: 0.75rem; color: #4d8a4d;">${count} entr${count === 1 ? 'y' : 'ies'}</div>
+              <div style="font-weight: 700; color: ${total < 0 ? '#d14b4b' : '#2d7a2d'}; font-size: 0.95rem;">${money(total)}</div>
+            </div>
+          </div>
+        </div>`;
     }).join('');
   }
 
   function renderAll() { renderTotal(); renderBreakdown(); renderFields(); renderWallets(); }
 
+  window.toggleField = (name) => {
+    if (expandedFields.has(name)) expandedFields.delete(name);
+    else expandedFields.add(name);
+    renderFields();
+  };
+
+  window.toggleWallet = (name) => {
+    if (expandedWallets.has(name)) expandedWallets.delete(name);
+    else expandedWallets.add(name);
+    renderWallets();
+  };
+
   function createField(name, color) { const n = name.trim(); if (!n) return alert('Enter field name.'); if (fields.some(f => f.toLowerCase() === n.toLowerCase())) return alert('Exists.'); fields.push(n); fieldColors[n] = color || '#1d3b5c'; saveData(); renderAll(); renderPnl(); newField.value = ''; newFieldColor.value = '#1d3b5c'; }
   
-  function deleteField(name) { 
+  window.deleteField = (name) => { 
     if (!confirm(`Delete "${name}" and ALL its entries?`)) return; 
     fields = fields.filter(f => f !== name); 
     entries = entries.filter(e => (e.fieldName || '') !== name); 
     pnlStreams.forEach(stream => { stream.entries = stream.entries.filter(e => (e.fieldName || '') !== name); });
     delete fieldColors[name]; 
+    expandedFields.delete(name);
     saveData(); 
     renderAll(); 
     renderPnl();
@@ -530,7 +688,8 @@
 
   const colorModal = $('colorModal'); const colorModalTitle = $('colorModalTitle'); const colorGrid = $('colorGrid'); const customColorPick = $('customColorPick'); const customColorHex = $('customColorHex'); const colorCancelBtn = $('colorCancelBtn'); const colorSaveBtn = $('colorSaveBtn');
   let modalTargetField = null; let modalSelectedColor = '#1d3b5c';
-  function openColorModal(f) { modalTargetField = f; modalSelectedColor = fieldColors[f] || '#1d3b5c'; colorModalTitle.textContent = `Color for "${f}"`; renderColorGrid(); customColorPick.value = modalSelectedColor; customColorHex.textContent = modalSelectedColor; colorModal.classList.remove('hidden'); }
+  
+  window.openColorModal = (f) => { modalTargetField = f; modalSelectedColor = fieldColors[f] || '#1d3b5c'; colorModalTitle.textContent = `Color for "${f}"`; renderColorGrid(); customColorPick.value = modalSelectedColor; customColorHex.textContent = modalSelectedColor; colorModal.classList.remove('hidden'); }
   function renderColorGrid() { colorGrid.innerHTML = PALETTE.map(c => `<div class="color-swatch ${c.toLowerCase() === modalSelectedColor.toLowerCase() ? 'selected' : ''}" style="background:${c}" data-color="${c}"></div>`).join(''); }
   function closeColorModal() { colorModal.classList.add('hidden'); modalTargetField = null; }
   function saveColorModal() { if (!modalTargetField) return; fieldColors[modalTargetField] = modalSelectedColor; saveData(); closeColorModal(); renderAll(); renderPnl(); }
@@ -542,7 +701,6 @@
 
   createFieldBtn.addEventListener('click', () => createField(newField.value, newFieldColor.value));
   newField.addEventListener('keypress', e => { if (e.key === 'Enter') { e.preventDefault(); createField(newField.value, newFieldColor.value); } });
-  fieldList.addEventListener('click', e => { const d = e.target.closest('.delete-btn[data-field]'); if (d) return deleteField(d.dataset.field); const c = e.target.closest('.edit-field-btn[data-color-field]'); if (c) return openColorModal(c.dataset.colorField); });
   
   exportCsvBtn.addEventListener('click', exportCSV);
   backupBtn.addEventListener('click', backup);
@@ -552,7 +710,7 @@
   resetDataBtn.addEventListener('click', async () => {
     if (!confirm('⚠️ WARNING: This will permanently delete ALL fields, entries, and streams from this device and the cloud. Are you sure?')) return;
     fields = []; entries = []; pnlStreams = []; fieldColors = {};
-    expandedStreams.clear();
+    expandedFields.clear(); expandedWallets.clear(); expandedStreams.clear();
     await saveToCloud();
     renderAll(); renderPnl();
     alert('🗑️ All data has been reset.');
@@ -564,14 +722,12 @@
   colorSaveBtn.addEventListener('click', saveColorModal);
   colorModal.addEventListener('click', e => { if (e.target === colorModal) closeColorModal(); });
 
-  // BULLETPROOF WALLET PICKER EVENT DELEGATION
+  // WALLET PICKER EVENT DELEGATION
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('.wallet-select-btn');
     if (btn) {
-      // Find the input directly before the button
       const input = btn.parentElement.querySelector('.pnl-wallet');
       window.tempWalletInput = input;
-      
       const wallets = discoverWallets();
       const list = document.getElementById('walletPickerList');
       
@@ -584,7 +740,6 @@
           </div>
         `).join('');
       }
-      
       document.getElementById('walletPickerModal').classList.remove('hidden');
     }
   });
@@ -647,7 +802,9 @@
     const form = document.getElementById(`pnlForm-${streamId}`);
     const desc = form.querySelector('.pnl-desc').value.trim();
     const field = form.querySelector('.pnl-field').value;
-    const date = form.querySelector('.pnl-date').value || currentPnlMonth + '-01';
+    
+    const defaultDate = pnlViewMode === 'yearly' ? `${pnlYearSelect.value}-01-01` : `${currentPnlMonth}-01`;
+    const date = form.querySelector('.pnl-date').value || defaultDate;
     
     const splitRows = form.querySelectorAll('.pnl-split-row');
     let added = false;
@@ -692,32 +849,35 @@
   }
 
   function renderPnl() {
-    let monthTotal = 0; const monthWalletTotals = {};
+    let periodTotal = 0; const monthWalletTotals = {};
+    const isYearly = pnlViewMode === 'yearly';
+    const datePrefix = isYearly ? pnlYearSelect.value : currentPnlMonth;
 
-    const [yStr, mStr] = currentPnlMonth.split('-');
-    pnlYearSelect.value = yStr;
-    pnlMonthSelect.value = parseInt(mStr);
+    pnlYearSelect.value = currentPnlYear;
+    pnlMonthSelect.value = parseInt(currentPnlMonth.split('-')[1]);
 
     pnlStreams.forEach(stream => {
       stream.entries.forEach(e => {
-        if (e.date.startsWith(currentPnlMonth)) {
-          const amt = Number(e.amount) || 0; monthTotal += amt;
+        if (e.date.startsWith(datePrefix)) {
+          const amt = Number(e.amount) || 0; periodTotal += amt;
           const w = e.wallet.trim() || 'Unassigned'; monthWalletTotals[w] = (monthWalletTotals[w] || 0) + amt;
         }
       });
     });
 
-    pnlTotalDisplay.textContent = money(monthTotal); pnlTotalDisplay.classList.toggle('negative', monthTotal < 0);
+    pnlTotalDisplay.textContent = money(periodTotal); pnlTotalDisplay.classList.toggle('negative', periodTotal < 0);
 
     if (!pnlStreams.length) {
       pnlStreamsList.innerHTML = '<div class="empty">No income streams yet. Create one above! 👆</div>';
     } else {
       pnlStreamsList.innerHTML = pnlStreams.map(stream => {
-        const monthEntries = stream.entries.filter(e => e.date.startsWith(currentPnlMonth));
-        const streamTotal = monthEntries.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+        const periodEntries = stream.entries.filter(e => e.date.startsWith(datePrefix));
+        const streamTotal = periodEntries.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
         const isExpanded = expandedStreams.has(stream.id);
         
-        const entriesHtml = !monthEntries.length ? '<div style="font-size: 0.85rem; color: #9aa9b9; font-style: italic; padding: 0.5rem 0;">No entries this month.</div>' : monthEntries.map(e => `
+        periodEntries.sort((a,b) => (a.date < b.date ? 1 : -1));
+
+        const entriesHtml = !periodEntries.length ? '<div style="font-size: 0.85rem; color: #9aa9b9; font-style: italic; padding: 0.5rem 0;">No entries for this period.</div>' : periodEntries.map(e => `
           <div class="transaction" style="padding: 0.6rem 0.8rem; margin-bottom: 0.4rem;">
             <div class="trans-info">
               ${e.fieldName ? `<span class="trans-field" style="background: ${colorFor(e.fieldName)}; font-size: 0.65rem; padding: 0.1rem 0.5rem;">${esc(e.fieldName)}</span>` : ''}
@@ -730,6 +890,8 @@
               <button class="delete-btn" onclick="event.stopPropagation(); window.deletePnlEntry('${stream.id}', '${e.id}')" style="width: 26px; height: 26px; font-size: 0.8rem;">✕</button>
             </div>
           </div>`).join('');
+
+        const defaultDateVal = isYearly ? `${pnlYearSelect.value}-01-01` : `${currentPnlMonth}-01`;
 
         return `
           <div class="stream-card">
@@ -748,7 +910,7 @@
               <div style="margin-bottom: 0.5rem;">${entriesHtml}</div>
               
               <div class="pnl-entry-form" id="pnlForm-${stream.id}">
-                <div style="font-size: 0.75rem; font-weight: 700; color: #1d3b5c; text-transform: uppercase;">Add Entry for ${pnlMonthName(currentPnlMonth)}</div>
+                <div style="font-size: 0.75rem; font-weight: 700; color: #1d3b5c; text-transform: uppercase;">Add Entry for ${isYearly ? pnlYearSelect.value : pnlMonthName(currentPnlMonth)}</div>
                 
                 <input type="text" class="pnl-desc" placeholder="Description (optional)">
                 
@@ -757,7 +919,7 @@
                     <option value="">— No field —</option>
                     ${fields.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('')}
                   </select>
-                  <input type="date" class="pnl-date" value="${currentPnlMonth}-01">
+                  <input type="date" class="pnl-date" value="${defaultDateVal}">
                 </div>
                 
                 <div class="pnl-splits" id="splits-${stream.id}">
