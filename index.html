@@ -15,8 +15,8 @@
 
   /* Bottom Tabs */
   .bottom-tabs {
-    display: flex; position: fixed; bottom: 0; left: 0; width: 100%; height: 60px;
-    background: white; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+    display: flex; position: fixed; bottom: 0; left: 0; width: 100%; height: 65px;
+    background: white; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
     padding-bottom: env(safe-area-inset-bottom);
   }
   .bottom-tab {
@@ -29,7 +29,7 @@
 
   /* Horizontal Swipe Wrapper */
   .swipe-wrapper {
-    display: flex; width: 200vw; height: calc(100vh - 60px);
+    display: flex; width: 100vw; height: calc(100vh - 65px);
     overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth;
   }
   .swipe-wrapper::-webkit-scrollbar { display: none; }
@@ -174,7 +174,6 @@
 <!-- MAIN APP (Hidden until login) -->
 <div id="mainApp" class="hidden" style="height: 100%; display: flex; flex-direction: column;">
   
-  <!-- Swipe Wrapper -->
   <div class="swipe-wrapper" id="swipeWrapper">
     
     <!-- PAGE 1: BUDGET MANAGER -->
@@ -277,7 +276,6 @@
       <div class="container" style="padding-bottom: 80px;">
         <h1>📈 Monthly P&L</h1>
 
-        <!-- Month Navigation & Total -->
         <div class="month-nav">
           <button id="pnlPrevMonth">←</button>
           <div class="month-title" id="pnlMonthDisplay">Month</div>
@@ -289,7 +287,6 @@
           <div class="total-amount" id="pnlTotalDisplay">$0.00</div>
         </div>
 
-        <!-- Create Stream -->
         <div class="card">
           <h2>➕ Create Income Stream</h2>
           <div class="field-create">
@@ -298,10 +295,8 @@
           </div>
         </div>
 
-        <!-- List of Streams -->
         <div id="pnlStreamsList"></div>
 
-        <!-- Wallet Totals for Month (Bottom) -->
         <div class="pnl-wallet-summary" id="pnlWalletSummary" style="display: none;">
           <h3 style="margin: 0 0 1rem; font-size: 1rem; color: #1e5a1e;">💼 Wallet Totals (This Month)</h3>
           <div id="pnlWalletRows"></div>
@@ -348,7 +343,6 @@
   auth = getAuth(app);
   db = getFirestore(app);
 
-  // ---- UI Elements ----
   const loadingScreen = document.getElementById('loadingScreen');
   const authScreen = document.getElementById('authScreen');
   const mainApp = document.getElementById('mainApp');
@@ -364,7 +358,6 @@
 
   let isLoginMode = true;
 
-  // ---- App State ----
   let fields = []; let fieldColors = {}; let entries = []; let editingId = null;
   let pnlStreams = []; 
   let currentPnlMonth = new Date().toISOString().slice(0, 7); 
@@ -373,7 +366,6 @@
 
   const $ = id => document.getElementById(id);
   
-  // Budget Elements
   const totalDisplay = $('totalDisplay'); const newField = $('newField'); const newFieldColor = $('newFieldColor'); const createFieldBtn = $('createFieldBtn');
   const fieldList = $('fieldList'); const walletList = $('walletList'); const fieldTotalsBreakdown = $('fieldTotalsBreakdown'); const fieldSelect = $('fieldSelect');
   const entryForm = $('entryForm'); const amount = $('amount'); const wallet = $('wallet'); const walletSuggestions = $('walletSuggestions');
@@ -383,22 +375,18 @@
   const backupBtn = $('backupBtn'); const restoreBtn = $('restoreBtn'); const restoreFile = $('restoreFile');
   const filterField = $('filterField'); const filterWallet = $('filterWallet');
 
-  // P&L Elements & Bottom Tabs
   const tabBudget = $('tabBudget'); const tabPnl = $('tabPnl'); const swipeWrapper = $('swipeWrapper');
   const pnlPrevMonth = $('pnlPrevMonth'); const pnlNextMonth = $('pnlNextMonth'); const pnlMonthDisplay = $('pnlMonthDisplay');
   const pnlTotalDisplay = $('pnlTotalDisplay'); const newStreamName = $('newStreamName'); const createStreamBtn = $('createStreamBtn');
   const pnlStreamsList = $('pnlStreamsList'); const pnlWalletSummary = $('pnlWalletSummary'); const pnlWalletRows = $('pnlWalletRows');
 
-  // Bulletproof Tab Logic
   function goToPage(pageIndex) {
-    // 0 = Budget, 1 = P&L
     if (pageIndex === 0) {
       tabBudget.classList.add('active'); tabPnl.classList.remove('active');
-      swipeWrapper.scrollTo({ left: 0, behavior: 'smooth' });
+      setTimeout(() => { swipeWrapper.scrollTo({ left: 0, behavior: 'smooth' }); }, 10);
     } else {
       tabPnl.classList.add('active'); tabBudget.classList.remove('active');
-      const pageWidth = document.getElementById('budgetPage').clientWidth;
-      swipeWrapper.scrollTo({ left: pageWidth, behavior: 'smooth' });
+      setTimeout(() => { swipeWrapper.scrollTo({ left: window.innerWidth, behavior: 'smooth' }); }, 10);
     }
   }
 
@@ -406,15 +394,13 @@
   tabPnl.addEventListener('click', () => goToPage(1));
   
   swipeWrapper.addEventListener('scroll', () => {
-    const pageWidth = document.getElementById('budgetPage').clientWidth;
-    if (swipeWrapper.scrollLeft > pageWidth / 2) {
+    if (swipeWrapper.scrollLeft > window.innerWidth / 2) {
       tabPnl.classList.add('active'); tabBudget.classList.remove('active');
     } else {
       tabBudget.classList.add('active'); tabPnl.classList.remove('active');
     }
   });
 
-  // AUTHENTICATION
   tabLogin.addEventListener('click', () => {
     isLoginMode = true; tabLogin.classList.add('active'); tabSignup.classList.remove('active');
     authSubmitBtn.textContent = 'Log In'; authError.textContent = '';
@@ -447,7 +433,6 @@
     }
   });
 
-  // CLOUD SYNC
   async function saveToCloud() {
     if (!currentUser) return;
     try { await setDoc(doc(db, "users", currentUser.uid), { fields, entries, fieldColors, pnlStreams, lastUpdated: new Date().toISOString() }); } 
@@ -475,7 +460,6 @@
     saveToCloud();
   }
 
-  // BUDGET APP LOGIC
   function esc(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function fmtDate(d) { if (!d) return null; try { const dt = new Date(d + 'T00:00:00'); if (isNaN(dt)) return d; return dt.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' }); } catch { return d; } }
   function uid() { return Date.now() + '-' + Math.random().toString(36).slice(2, 9); }
@@ -541,7 +525,6 @@
 
   function renderAll() { renderTotal(); renderBreakdown(); renderFields(); renderWallets(); renderSelect(); renderFilters(); renderTrans(); }
 
-  // Budget Actions
   function createField(name, color) { const n = name.trim(); if (!n) return alert('Enter field name.'); if (fields.some(f => f.toLowerCase() === n.toLowerCase())) return alert('Exists.'); fields.push(n); fieldColors[n] = color || '#1d3b5c'; saveData(); renderAll(); newField.value = ''; newFieldColor.value = '#1d3b5c'; }
   function deleteField(name) { if (!confirm(`Delete "${name}" and ALL its entries?`)) return; fields = fields.filter(f => f !== name); entries = entries.filter(e => (e.fieldName || '') !== name); delete fieldColors[name]; saveData(); if (editingId && !entries.find(e => e.id === editingId)) cancelEdit(); renderAll(); }
   function deleteEntry(id) { entries = entries.filter(e => e.id !== id); saveData(); if (editingId === id) cancelEdit(); renderAll(); }
@@ -556,7 +539,6 @@
     saveData(); formError.textContent = ''; if (editingId) cancelEdit(); else { amount.value = ''; wallet.value = ''; desc.value = ''; if (!date.value) date.value = new Date().toISOString().slice(0,10); } renderAll();
   }
 
-  // Color Modal
   const colorModal = $('colorModal'); const colorModalTitle = $('colorModalTitle'); const colorGrid = $('colorGrid'); const customColorPick = $('customColorPick'); const customColorHex = $('customColorHex'); const colorCancelBtn = $('colorCancelBtn'); const colorSaveBtn = $('colorSaveBtn');
   let modalTargetField = null; let modalSelectedColor = '#1d3b5c';
   function openColorModal(f) { modalTargetField = f; modalSelectedColor = fieldColors[f] || '#1d3b5c'; colorModalTitle.textContent = `Color for "${f}"`; renderColorGrid(); customColorPick.value = modalSelectedColor; customColorHex.textContent = modalSelectedColor; colorModal.classList.remove('hidden'); }
@@ -564,13 +546,11 @@
   function closeColorModal() { colorModal.classList.add('hidden'); modalTargetField = null; }
   function saveColorModal() { if (!modalTargetField) return; fieldColors[modalTargetField] = modalSelectedColor; saveData(); closeColorModal(); renderAll(); }
 
-  // CSV/Backup
   function csvEscape(v) { const s = String(v == null ? '' : v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
   function exportCSV() { if (!entries.length) return alert('No entries.'); const rows = [['Date', 'Field', 'Amount', 'Wallet', 'Description'].map(csvEscape).join(',')]; const sorted = [...entries].sort((a,b) => { const da = a.date || '', db = b.date || ''; return da === db ? 0 : (da < db ? 1 : -1); }); sorted.forEach(e => { rows.push([e.date || '', e.fieldName || '', (e.amount !== '' && e.amount !== null) ? Number(e.amount).toFixed(2) : '', e.wallet || '', e.description || ''].map(csvEscape).join(',')); }); const blob = new Blob(['\uFEFF' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `budget-export-${new Date().toISOString().slice(0,10)}.csv`; a.click(); }
   function backup() { const data = { fields, entries, fieldColors, pnlStreams, exported: new Date().toISOString() }; const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `budget-backup-${new Date().toISOString().slice(0,10)}.json`; a.click(); }
   function restore(file) { const reader = new FileReader(); reader.onload = e => { try { const data = JSON.parse(e.target.result); if (!Array.isArray(data.fields) || !Array.isArray(data.entries)) throw new Error('Invalid file'); if (!confirm('REPLACE all data?')) return; fields = data.fields; entries = data.entries; fieldColors = data.fieldColors || {}; pnlStreams = data.pnlStreams || []; saveData(); cancelEdit(); renderAll(); renderPnl(); alert('✅ Restored!'); } catch (err) { alert('❌ Error: ' + err.message); } }; reader.readAsText(file); }
 
-  // Listeners
   createFieldBtn.addEventListener('click', () => createField(newField.value, newFieldColor.value));
   newField.addEventListener('keypress', e => { if (e.key === 'Enter') { e.preventDefault(); createField(newField.value, newFieldColor.value); } });
   fieldList.addEventListener('click', e => { const d = e.target.closest('.delete-btn[data-field]'); if (d) return deleteField(d.dataset.field); const c = e.target.closest('.edit-field-btn[data-color-field]'); if (c) return openColorModal(c.dataset.colorField); });
@@ -590,7 +570,6 @@
   colorSaveBtn.addEventListener('click', saveColorModal);
   colorModal.addEventListener('click', e => { if (e.target === colorModal) closeColorModal(); });
 
-  // P&L LOGIC
   function pnlMonthName(m) { const [y, mth] = m.split('-'); return new Date(y, parseInt(mth) - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }); }
   function changeMonth(offset) { const [y, m] = currentPnlMonth.split('-').map(Number); currentPnlMonth = new Date(y, m - 1 + offset, 1).toISOString().slice(0, 7); renderPnl(); }
   pnlPrevMonth.addEventListener('click', () => changeMonth(-1));
