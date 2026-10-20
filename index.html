@@ -374,18 +374,6 @@
   </div>
 </div>
 
-<!-- INSTALL HELP MODAL (UPDATED) -->
-<div class="modal-overlay hidden" id="installHelpModal">
-  <div class="modal" style="text-align: center;">
-    <h3>📥 Install App</h3>
-    <p style="color: #6d839b; font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem;">
-      Chrome has paused the automatic install prompt. Tap the button below to force a refresh, or use the 3 dots (⋮) in your browser menu.
-    </p>
-    <button class="btn" id="forceInstallBtn" style="margin-bottom: 1rem;">🔄 Force Install</button>
-    <button class="btn btn-secondary" onclick="document.getElementById('installHelpModal').classList.add('hidden')">Cancel</button>
-  </div>
-</div>
-
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -449,7 +437,6 @@
   const pnlMonthSelect = $('pnlMonthSelect'); const pnlYearSelect = $('pnlYearSelect');
   const viewMonthlyBtn = $('viewMonthlyBtn'); const viewYearlyBtn = $('viewYearlyBtn');
 
-  // Toggle Privacy Mode when tapping any money text
   document.addEventListener('click', (e) => {
     if (e.target.closest('.money-text')) {
       document.body.classList.toggle('privacy-mode');
@@ -549,18 +536,27 @@
 
   onAuthStateChanged(auth, async (user) => {
     if (user) {
-      currentUser = user; authScreen.classList.add('hidden'); mainApp.classList.remove('hidden'); loadingScreen.classList.add('hidden');
+      currentUser = user; 
+      authScreen.classList.add('hidden'); 
+      mainApp.classList.remove('hidden'); 
+      loadingScreen.classList.add('hidden');
       document.body.classList.add('privacy-mode');
+      
+      // CRITICAL FIX: Reset state before loading
+      fields = []; entries = []; fieldColors = {}; pnlStreams = [];
+      
       await loadDataFromCloud();
     } else {
-      currentUser = null; mainApp.classList.add('hidden'); authScreen.classList.remove('hidden'); loadingScreen.classList.add('hidden');
+      currentUser = null; 
+      mainApp.classList.add('hidden'); 
+      authScreen.classList.remove('hidden'); 
+      loadingScreen.classList.add('hidden');
       authSubmitBtn.textContent = isLoginMode ? 'Log In' : 'Create Account';
       
-      localStorage.removeItem('bm_fields_v5');
-      localStorage.removeItem('bm_entries_v5');
-      localStorage.removeItem('bm_field_colors_v5');
+      // CRITICAL FIX: Completely wipe local storage on logout
+      localStorage.clear();
       
-      fields = []; entries = []; fieldColors = []; pnlStreams = [];
+      fields = []; entries = []; fieldColors = {}; pnlStreams = [];
     }
   });
 
@@ -572,8 +568,10 @@
 
   async function loadDataFromCloud() {
     try {
-      const docRef = doc(db, "users", currentUser.uid); const docSnap = await getDoc(docRef);
+      const docRef = doc(db, "users", currentUser.uid); 
+      const docSnap = await getDoc(docRef);
       
+      // Ensure completely blank slate before assigning
       fields = []; entries = []; fieldColors = {}; pnlStreams = [];
 
       if (docSnap.exists()) {
@@ -583,9 +581,11 @@
         fieldColors = data.fieldColors || {}; 
         pnlStreams = data.pnlStreams || [];
       } else {
+        // Brand new user, create blank document
         await saveToCloud();
       }
       
+      // Only save to local storage AFTER fetching the correct user data
       localStorage.setItem('bm_fields_v5', JSON.stringify(fields)); 
       localStorage.setItem('bm_entries_v5', JSON.stringify(entries)); 
       localStorage.setItem('bm_field_colors_v5', JSON.stringify(fieldColors));
@@ -595,7 +595,9 @@
   }
 
   function saveData() {
-    localStorage.setItem('bm_fields_v5', JSON.stringify(fields)); localStorage.setItem('bm_entries_v5', JSON.stringify(entries)); localStorage.setItem('bm_field_colors_v5', JSON.stringify(fieldColors));
+    localStorage.setItem('bm_fields_v5', JSON.stringify(fields)); 
+    localStorage.setItem('bm_entries_v5', JSON.stringify(entries)); 
+    localStorage.setItem('bm_field_colors_v5', JSON.stringify(fieldColors));
     saveToCloud();
   }
 
@@ -998,7 +1000,6 @@
   
   let deferredPrompt;
   const installBtn = document.getElementById('installBtn');
-  const forceInstallBtn = document.getElementById('forceInstallBtn');
   
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault(); 
@@ -1012,34 +1013,7 @@
         const { outcome } = await deferredPrompt.userChoice;
         deferredPrompt = null;
       } else {
-        document.getElementById('installHelpModal').classList.remove('hidden');
-      }
-    });
-  }
-
-  // New function to force reset the service worker and cache
-  if (forceInstallBtn) {
-    forceInstallBtn.addEventListener('click', async () => {
-      forceInstallBtn.textContent = 'Resetting...';
-      try {
-        // 1. Unregister Service Worker
-        if ('serviceWorker' in navigator) {
-          const registrations = await navigator.serviceWorker.getRegistrations();
-          for (let registration of registrations) {
-            await registration.unregister();
-          }
-        }
-        // 2. Clear Caches
-        if ('caches' in window) {
-          const cacheNames = await caches.keys();
-          for (let name of cacheNames) {
-            await caches.delete(name);
-          }
-        }
-        // 3. Reload page
-        window.location.reload(true);
-      } catch (e) {
-        alert('Please use the 3 dots (⋮) menu to install.');
+        alert('To install: Tap the 3 dots (⋮) at the top right of your browser and select "Install app" or "Add to Home Screen".');
       }
     });
   }
