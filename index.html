@@ -192,8 +192,10 @@
     background: white; border-radius: 1.25rem;
     padding: 1.5rem; max-width: 380px; width: 100%;
     box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    text-align: center;
   }
-  .modal h3 { margin: 0 0 1rem; font-size: 1.1rem; }
+  .modal h3 { margin: 0 0 1rem; font-size: 1.2rem; color: #0a2540; }
+  .modal p { font-size: 0.95rem; color: #3d5772; line-height: 1.5; margin-bottom: 1.5rem; }
   .wallet-option {
     padding: 0.8rem; background: #f4f8fc; border-radius: 0.8rem; 
     margin-bottom: 0.5rem; font-weight: 600; color: #1d3b5c; 
@@ -409,6 +411,16 @@
       <button class="btn btn-secondary" onclick="document.getElementById('editEntryModal').classList.add('hidden')">Cancel</button>
       <button class="btn" onclick="window.saveEditedEntry()">Save</button>
     </div>
+  </div>
+</div>
+
+<!-- ALREADY INSTALLED MODAL -->
+<div class="modal-overlay hidden" id="alreadyInstalledModal">
+  <div class="modal">
+    <div style="font-size: 3rem; margin-bottom: 0.5rem;">✅</div>
+    <h3>Already Installed</h3>
+    <p>It looks like you already have this app installed! You can find the <b>Budget</b> icon on your home screen and open it from there.</p>
+    <button class="btn" onclick="document.getElementById('alreadyInstalledModal').classList.add('hidden')">Awesome</button>
   </div>
 </div>
 
@@ -785,12 +797,10 @@
   colorSaveBtn.addEventListener('click', saveColorModal);
   colorModal.addEventListener('click', e => { if (e.target === colorModal) closeColorModal(); });
 
-  // WALLET PICKER EVENT DELEGATION (Works for both Add and Edit forms)
+  // WALLET PICKER EVENT DELEGATION
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('.wallet-select-btn');
     if (btn) {
-      // If it's the edit form button, we set the target manually in the button onclick.
-      // Otherwise, it's the add form button, so we find the sibling input.
       if (btn.hasAttribute('data-for-edit')) {
         window.tempWalletInput = document.getElementById('editWallet');
       } else {
@@ -949,7 +959,6 @@
         </div>
       `).join('');
     }
-    // Set target input
     window.tempWalletInput = document.getElementById('editWallet');
     document.getElementById('walletPickerModal').classList.remove('hidden');
   };
@@ -975,7 +984,6 @@
       return;
     }
 
-    // Update in main entries array
     const entryIdx = entries.findIndex(e => e.id === editingEntryId);
     if (entryIdx !== -1) {
       entries[entryIdx].amount = amtNum !== null ? amtNum : '';
@@ -985,7 +993,6 @@
       entries[entryIdx].date = dateVal;
     }
 
-    // Update in specific stream array
     const stream = pnlStreams.find(s => s.id === editingPnlStreamId);
     if (stream) {
       const streamEntryIdx = stream.entries.findIndex(e => e.id === editingEntryId);
@@ -1043,7 +1050,6 @@
             </div>
             <div class="trans-right">
               <span class="trans-amount money-text ${e.amount < 0 ? 'negative' : ''}" style="font-size: 0.95rem;">${money(e.amount)}</span>
-              <!-- NEW EDIT BUTTON -->
               <button class="edit-btn" onclick="event.stopPropagation(); window.openEditEntryModal('${stream.id}', '${e.id}')" title="Edit Entry" style="width: 26px; height: 26px; font-size: 0.8rem;">✏️</button>
               <button class="delete-btn" onclick="event.stopPropagation(); window.deletePnlEntry('${stream.id}', '${e.id}')" style="width: 26px; height: 26px; font-size: 0.8rem;">✕</button>
             </div>
@@ -1146,6 +1152,9 @@
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         deferredPrompt = null;
+      } else {
+        // Show the beautiful "Already Installed" message
+        document.getElementById('alreadyInstalledModal').classList.remove('hidden');
       }
     });
   }
