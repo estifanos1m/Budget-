@@ -13,6 +13,18 @@
     color: #0a2540; font-size: 16px;
   }
 
+  /* Privacy Mode (Blur) */
+  .money-text {
+    transition: filter 0.2s ease, opacity 0.2s ease;
+    display: inline-block;
+    cursor: pointer;
+  }
+  body.privacy-mode .money-text {
+    filter: blur(8px);
+    opacity: 0.6;
+    user-select: none;
+  }
+
   /* Bottom Tabs */
   .bottom-tabs {
     display: flex; position: fixed; bottom: 0; left: 0; width: 100%; height: 65px;
@@ -60,7 +72,6 @@
   .total-amount { font-size: 2.4rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
   .total-amount.negative { color: #ff9a9a; }
 
-  /* Collapsible Card (Replaces standard .card for lists) */
   .collapsible-card {
     background: white; border-radius: 1.25rem; margin-bottom: 1rem;
     box-shadow: 0 2px 8px rgba(10,37,64,0.06); overflow: hidden;
@@ -105,7 +116,6 @@
   .field-create .color-input::-webkit-color-swatch { border: none; border-radius: 0.6rem; }
   .field-create .btn { width: auto; padding: 0.9rem 1.1rem; }
 
-  /* Accordion Lists inside the bodies */
   .accordion-item { background: #f6f9fe; border-radius: 0.8rem; margin-bottom: 0.5rem; overflow: hidden; }
   .accordion-header-inner { padding: 0.85rem 1rem; cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; }
   .accordion-header-inner:active { background: #eef3fa; }
@@ -113,7 +123,6 @@
   .accordion-body-inner { padding: 0 1rem 0.85rem 1rem; display: none; border-top: 1px solid rgba(0,0,0,0.05); }
   .accordion-body-inner.open { display: block; padding-top: 0.75rem; }
 
-  /* Transactions */
   .transaction {
     background: #f9fbfe; border-radius: 0.9rem; padding: 0.9rem 1rem; margin-bottom: 0.6rem;
     border: 1px solid #eef2f8; display: flex; justify-content: space-between; align-items: flex-start; gap: 0.6rem;
@@ -135,7 +144,6 @@
   .error { color: #d14b4b; font-size: 0.85rem; margin-top: 0.5rem; min-height: 1.1rem; }
   .hidden { display: none !important; }
 
-  /* --- P&L SPECIFIC STYLES --- */
   .view-toggle { display: flex; background: #e2eaf4; border-radius: 1rem; padding: 0.3rem; margin-bottom: 1rem; }
   .view-btn { flex: 1; padding: 0.6rem; text-align: center; font-weight: 600; font-size: 0.9rem; color: #6d839b; border-radius: 0.8rem; cursor: pointer; transition: 0.2s; border: none; background: transparent; }
   .view-btn.active { background: white; color: #1d3b5c; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
@@ -172,7 +180,7 @@
   .pnl-wallet-row .amt { font-weight: 700; color: #2d7a2d; }
   .pnl-wallet-row .amt.negative { color: #d14b4b; }
 
-  /* Modal */
+  /* Modals */
   .modal-overlay {
     position: fixed; inset: 0; background: rgba(10,37,64,0.6);
     display: flex; align-items: center; justify-content: center;
@@ -193,14 +201,12 @@
   }
 </style>
 </head>
-<body>
+<body class="privacy-mode">
 
-<!-- LOADING SCREEN -->
 <div id="loadingScreen" style="text-align: center; padding: 3rem 1rem; color: #6d839b;">
   <h2>Connecting to Cloud... ☁️</h2>
 </div>
 
-<!-- AUTH SCREEN -->
 <div id="authScreen" class="auth-container hidden">
   <h1>💰 Budget & P&L</h1>
   <p class="auth-subtitle">Log in to sync your data across devices.</p>
@@ -224,23 +230,19 @@
   </form>
 </div>
 
-<!-- MAIN APP (Hidden until login) -->
 <div id="mainApp" class="hidden" style="height: 100%; display: flex; flex-direction: column;">
   
   <div class="swipe-wrapper" id="swipeWrapper">
     
-    <!-- PAGE 1: P&L INCOME STREAMS (NOW ON THE LEFT) -->
     <div class="page" id="pnlPage">
       <div class="container" style="padding-bottom: 80px;">
         <h1>📈 P&L Streams</h1>
 
-        <!-- View Toggle (Monthly / Yearly) -->
         <div class="view-toggle">
           <button class="view-btn active" id="viewMonthlyBtn">Monthly</button>
           <button class="view-btn" id="viewYearlyBtn">Yearly</button>
         </div>
 
-        <!-- Date Selection -->
         <div class="month-nav">
           <select id="pnlMonthSelect"></select>
           <select id="pnlYearSelect"></select>
@@ -248,10 +250,9 @@
 
         <div class="total-card" style="background: linear-gradient(135deg, #2d7a2d, #1e5a1e);">
           <div class="total-label" id="pnlTotalLabel">Total Net P&L (This Month)</div>
-          <div class="total-amount" id="pnlTotalDisplay">$0.00</div>
+          <div class="total-amount money-text" id="pnlTotalDisplay">$0.00</div>
         </div>
 
-        <!-- Create Income Stream -->
         <div class="collapsible-card">
           <div class="accordion-header" onclick="window.toggleAccordion('createStreamBody', this)">
             <div class="accordion-title">
@@ -276,7 +277,6 @@
       </div>
     </div>
 
-    <!-- PAGE 2: BUDGET MANAGER (NOW ON THE RIGHT) -->
     <div class="page" id="budgetPage">
       <div class="container">
         <h1 style="justify-content: space-between;">
@@ -289,10 +289,9 @@
 
         <div class="total-card">
           <div class="total-label">Grand Total (all fields)</div>
-          <div class="total-amount" id="totalDisplay">$0.00</div>
+          <div class="total-amount money-text" id="totalDisplay">$0.00</div>
         </div>
 
-        <!-- Field Totals Breakdown -->
         <div class="collapsible-card">
           <div class="accordion-header" onclick="window.toggleAccordion('fieldTotalsBody', this)">
             <div class="accordion-title">
@@ -304,7 +303,6 @@
           </div>
         </div>
 
-        <!-- Fields -->
         <div class="collapsible-card">
           <div class="accordion-header" onclick="window.toggleAccordion('createFieldBody', this)">
             <div class="accordion-title">
@@ -321,7 +319,6 @@
           </div>
         </div>
 
-        <!-- Wallets -->
         <div class="collapsible-card">
           <div class="accordion-header" onclick="window.toggleAccordion('walletListBody', this)">
             <div class="accordion-title">
@@ -335,7 +332,6 @@
           </div>
         </div>
 
-        <!-- Export & Backup -->
         <div class="collapsible-card" style="margin-bottom: 80px;">
           <div class="accordion-header" onclick="window.toggleAccordion('exportBody', this)">
             <div class="accordion-title">
@@ -357,7 +353,6 @@
 
   </div>
 
-  <!-- BOTTOM NAVIGATION TABS (SWAPPED ORDER) -->
   <div class="bottom-tabs">
     <div class="bottom-tab active" id="tabPnl">
       <span class="icon">📈</span>
@@ -371,7 +366,6 @@
 
 </div>
 
-<!-- WALLET PICKER MODAL -->
 <div class="modal-overlay hidden" id="walletPickerModal">
   <div class="modal">
     <h3>Select Existing Wallet</h3>
@@ -380,7 +374,17 @@
   </div>
 </div>
 
-<!-- FIREBASE SDK -->
+<div class="modal-overlay hidden" id="installHelpModal">
+  <div class="modal" style="text-align: center;">
+    <h3>📥 How to Install</h3>
+    <p style="color: #6d839b; font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem;">
+      Chrome has temporarily paused the automatic install button.<br><br> 
+      To install the app right now, please tap the <b>three dots (⋮)</b> in the top right of your browser and select <b>"Install app"</b> or <b>"Add to Home screen"</b>.
+    </p>
+    <button class="btn" onclick="document.getElementById('installHelpModal').classList.add('hidden')">Got it</button>
+  </div>
+</div>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -444,7 +448,13 @@
   const pnlMonthSelect = $('pnlMonthSelect'); const pnlYearSelect = $('pnlYearSelect');
   const viewMonthlyBtn = $('viewMonthlyBtn'); const viewYearlyBtn = $('viewYearlyBtn');
 
-  // Helper for card accordions
+  // Toggle Privacy Mode when tapping any money text
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.money-text')) {
+      document.body.classList.toggle('privacy-mode');
+    }
+  });
+
   window.toggleAccordion = function(id, el) {
     const body = document.getElementById(id);
     const icon = el.querySelector('.accordion-icon');
@@ -457,7 +467,6 @@
     }
   };
 
-  // Initialize 110 Years
   const monthsList = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   pnlMonthSelect.innerHTML = monthsList.map((m, i) => `<option value="${i+1}">${m}</option>`).join('');
   
@@ -468,7 +477,6 @@
   }
   pnlYearSelect.innerHTML = yearsOptions;
 
-  // View Toggle Logic
   viewMonthlyBtn.addEventListener('click', () => {
     pnlViewMode = 'monthly';
     viewMonthlyBtn.classList.add('active'); viewYearlyBtn.classList.remove('active');
@@ -496,14 +504,11 @@
     renderPnl();
   });
 
-  // UPDATED TAB LOGIC
   function goToPage(pageIndex) {
     if (pageIndex === 0) {
-      // P&L (Left)
       tabPnl.classList.add('active'); tabBudget.classList.remove('active');
       setTimeout(() => { swipeWrapper.scrollTo({ left: 0, behavior: 'smooth' }); }, 10);
     } else {
-      // Budget (Right)
       tabBudget.classList.add('active'); tabPnl.classList.remove('active');
       setTimeout(() => { swipeWrapper.scrollTo({ left: window.innerWidth, behavior: 'smooth' }); }, 10);
     }
@@ -544,10 +549,17 @@
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       currentUser = user; authScreen.classList.add('hidden'); mainApp.classList.remove('hidden'); loadingScreen.classList.add('hidden');
+      // Reset privacy mode on login
+      document.body.classList.add('privacy-mode');
       await loadDataFromCloud();
     } else {
       currentUser = null; mainApp.classList.add('hidden'); authScreen.classList.remove('hidden'); loadingScreen.classList.add('hidden');
       authSubmitBtn.textContent = isLoginMode ? 'Log In' : 'Create Account';
+      
+      localStorage.removeItem('bm_fields_v5');
+      localStorage.removeItem('bm_entries_v5');
+      localStorage.removeItem('bm_field_colors_v5');
+      
       fields = []; entries = []; fieldColors = []; pnlStreams = [];
     }
   });
@@ -561,15 +573,23 @@
   async function loadDataFromCloud() {
     try {
       const docRef = doc(db, "users", currentUser.uid); const docSnap = await getDoc(docRef);
+      
+      fields = []; entries = []; fieldColors = {}; pnlStreams = [];
+
       if (docSnap.exists()) {
-        const data = docSnap.data(); fields = data.fields || []; entries = data.entries || []; fieldColors = data.fieldColors || {}; pnlStreams = data.pnlStreams || [];
+        const data = docSnap.data(); 
+        fields = data.fields || []; 
+        entries = data.entries || []; 
+        fieldColors = data.fieldColors || {}; 
+        pnlStreams = data.pnlStreams || [];
       } else {
-        const localF = localStorage.getItem('bm_fields_v5');
-        if (localF) {
-          fields = JSON.parse(localF) || []; fieldColors = JSON.parse(localStorage.getItem('bm_field_colors_v5')) || {}; entries = JSON.parse(localStorage.getItem('bm_entries_v5')) || []; await saveToCloud();
-        }
+        await saveToCloud();
       }
-      localStorage.setItem('bm_fields_v5', JSON.stringify(fields)); localStorage.setItem('bm_entries_v5', JSON.stringify(entries)); localStorage.setItem('bm_field_colors_v5', JSON.stringify(fieldColors));
+      
+      localStorage.setItem('bm_fields_v5', JSON.stringify(fields)); 
+      localStorage.setItem('bm_entries_v5', JSON.stringify(entries)); 
+      localStorage.setItem('bm_field_colors_v5', JSON.stringify(fieldColors));
+      
       renderAll(); renderPnl();
     } catch (e) { console.error(e); alert("Failed to load data from cloud. Check internet."); }
   }
@@ -590,14 +610,18 @@
   function discoverWallets() { const set = new Set(); entries.forEach(e => { if (e.wallet) set.add(e.wallet); }); return Array.from(set).sort((a,b) => a.localeCompare(b)); }
   function allFieldNames() { const set = new Set(fields); entries.forEach(e => { if (e.fieldName) set.add(e.fieldName); }); return Array.from(set); }
 
-  function renderTotal() { const total = grandTotal(); totalDisplay.textContent = money(total); totalDisplay.classList.toggle('negative', total < 0); }
+  function renderTotal() { 
+    const total = grandTotal(); 
+    totalDisplay.textContent = money(total); 
+    totalDisplay.classList.toggle('negative', total < 0); 
+  }
   
   function renderBreakdown() {
     const allF = allFieldNames();
     if (!allF.length) { fieldTotalsBreakdown.innerHTML = '<div class="empty">No fields yet.</div>'; return; }
     fieldTotalsBreakdown.innerHTML = allF.map(f => {
       const t = fieldTotal(f), col = colorFor(f);
-      return `<div style="display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0.75rem; background: #f6f9fe; border-radius: 0.7rem; margin-bottom: 0.4rem; font-size: 0.95rem;"><span style="font-weight: 500; display: flex; align-items: center; gap: 0.5rem;"><span style="width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.1); background:${col}"></span>${esc(f)}</span><span style="font-weight: 700; color: ${t < 0 ? '#d14b4b' : '#1d3b5c'}">${money(t)}</span></div>`;
+      return `<div style="display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0.75rem; background: #f6f9fe; border-radius: 0.7rem; margin-bottom: 0.4rem; font-size: 0.95rem;"><span style="font-weight: 500; display: flex; align-items: center; gap: 0.5rem;"><span style="width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.1); background:${col}"></span>${esc(f)}</span><span class="money-text" style="font-weight: 700; color: ${t < 0 ? '#d14b4b' : '#1d3b5c'}">${money(t)}</span></div>`;
     }).join('');
   }
   
@@ -622,7 +646,7 @@
           <div class="accordion-body-inner ${isExpanded ? 'open' : ''}">
             <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 0.25rem;">
               <div style="font-size: 0.75rem; color: #6d839b;">${count} entr${count === 1 ? 'y' : 'ies'}</div>
-              <div style="font-weight: 700; color: ${total < 0 ? '#d14b4b' : '#1d3b5c'}; font-size: 0.95rem;">${money(total)}</div>
+              <div class="money-text" style="font-weight: 700; color: ${total < 0 ? '#d14b4b' : '#1d3b5c'}; font-size: 0.95rem;">${money(total)}</div>
               <div style="display: flex; gap: 0.4rem;">
                 ${isUser ? `<button class="edit-field-btn" onclick="event.stopPropagation(); window.openColorModal('${esc(f)}')" title="Change color" style="background: #e8f0fb; border: none; color: #1d3b5c; font-size: 0.85rem; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;">🎨</button><button class="delete-btn" onclick="event.stopPropagation(); window.deleteField('${esc(f)}')" title="Delete field" style="background: #ffeaea; border: none; color: #d14b4b; font-size: 0.9rem; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>` : ''}
               </div>
@@ -651,7 +675,7 @@
           <div class="accordion-body-inner ${isExpanded ? 'open' : ''}" style="border-top-color: #c8e6c9;">
             <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 0.25rem;">
               <div style="font-size: 0.75rem; color: #4d8a4d;">${count} entr${count === 1 ? 'y' : 'ies'}</div>
-              <div style="font-weight: 700; color: ${total < 0 ? '#d14b4b' : '#2d7a2d'}; font-size: 0.95rem;">${money(total)}</div>
+              <div class="money-text" style="font-weight: 700; color: ${total < 0 ? '#d14b4b' : '#2d7a2d'}; font-size: 0.95rem;">${money(total)}</div>
             </div>
           </div>
         </div>`;
@@ -722,7 +746,6 @@
   colorSaveBtn.addEventListener('click', saveColorModal);
   colorModal.addEventListener('click', e => { if (e.target === colorModal) closeColorModal(); });
 
-  // WALLET PICKER EVENT DELEGATION
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('.wallet-select-btn');
     if (btn) {
@@ -755,7 +778,6 @@
     }
   });
 
-  // P&L LOGIC
   function pnlMonthName(m) { const [y, mth] = m.split('-'); return new Date(y, parseInt(mth) - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }); }
   
   window.toggleStream = function(id) {
@@ -886,7 +908,7 @@
               <div class="trans-date">📅 ${fmtDate(e.date)}</div>
             </div>
             <div class="trans-right">
-              <span class="trans-amount ${e.amount < 0 ? 'negative' : ''}" style="font-size: 0.95rem;">${money(e.amount)}</span>
+              <span class="trans-amount money-text ${e.amount < 0 ? 'negative' : ''}" style="font-size: 0.95rem;">${money(e.amount)}</span>
               <button class="delete-btn" onclick="event.stopPropagation(); window.deletePnlEntry('${stream.id}', '${e.id}')" style="width: 26px; height: 26px; font-size: 0.8rem;">✕</button>
             </div>
           </div>`).join('');
@@ -901,7 +923,7 @@
                 <div class="stream-name">${esc(stream.name)}</div>
               </div>
               <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <div class="stream-total ${streamTotal < 0 ? 'negative' : ''}">${money(streamTotal)}</div>
+                <div class="stream-total money-text ${streamTotal < 0 ? 'negative' : ''}">${money(streamTotal)}</div>
                 <button class="delete-btn" onclick="event.stopPropagation(); window.deleteStream('${stream.id}')" title="Delete Stream" style="width: 26px; height: 26px; font-size: 0.8rem;">✕</button>
               </div>
             </div>
@@ -943,7 +965,7 @@
     const wallets = Object.keys(monthWalletTotals).sort();
     if (!wallets.length) { pnlWalletSummary.style.display = 'none'; } else {
       pnlWalletSummary.style.display = 'block';
-      pnlWalletRows.innerHTML = wallets.map(w => `<div class="pnl-wallet-row"><span>💼 ${esc(w)}</span><span class="amt ${monthWalletTotals[w] < 0 ? 'negative' : ''}">${money(monthWalletTotals[w])}</span></div>`).join('');
+      pnlWalletRows.innerHTML = wallets.map(w => `<div class="pnl-wallet-row"><span>💼 ${esc(w)}</span><span class="amt money-text ${monthWalletTotals[w] < 0 ? 'negative' : ''}">${money(monthWalletTotals[w])}</span></div>`).join('');
     }
   }
 
@@ -953,7 +975,6 @@
   window.deletePnlEntry = deletePnlEntry;
 </script>
 
-<!-- COLOR MODAL -->
 <div class="modal-overlay hidden" id="colorModal">
   <div class="modal">
     <h3 id="colorModalTitle">Pick a color</h3>
@@ -970,25 +991,28 @@
   </div>
 </div>
 
-<!-- SERVICE WORKER -->
 <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js');
   }
+  
   let deferredPrompt;
   const installBtn = document.getElementById('installBtn');
+  
   window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault(); deferredPrompt = e;
+    e.preventDefault(); 
+    deferredPrompt = e;
   });
+  
   if (installBtn) {
     installBtn.addEventListener('click', async () => {
-      if (!deferredPrompt) {
-        alert('App is already installed, or your browser does not support this. On iPhone, tap Share -> Add to Home Screen.');
-        return;
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        deferredPrompt = null;
+      } else {
+        document.getElementById('installHelpModal').classList.remove('hidden');
       }
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      deferredPrompt = null;
     });
   }
 </script>
