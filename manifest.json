@@ -1,7 +1,7 @@
 {
-  "name": "Budget & P&L Manager",
-  "short_name": "Budget",
-  "start_url": "./index.html",
+  "name": "Budget & P&L Pro",
+  "short_name": "Budget Pro",
+  "start_url": "./index.html?v=2",
   "display": "standalone",
   "background_color": "#f0f4fa",
   "theme_color": "#0a2540",
