@@ -1,9 +1,9 @@
 {
-  "id": "/Budget-/",
+  "id": "https://estifanos1m.github.io/Budget-/",
   "name": "Budget & P&L",
   "short_name": "Budget",
-  "start_url": "./",
-  "scope": "./",
+  "start_url": "https://estifanos1m.github.io/Budget-/",
+  "scope": "https://estifanos1m.github.io/Budget-/",
   "display": "standalone",
   "background_color": "#f0f4fa",
   "theme_color": "#0a2540",
