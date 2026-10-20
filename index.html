@@ -374,14 +374,15 @@
   </div>
 </div>
 
+<!-- INSTALL HELP MODAL (UPDATED) -->
 <div class="modal-overlay hidden" id="installHelpModal">
   <div class="modal" style="text-align: center;">
-    <h3>📥 How to Install</h3>
+    <h3>📥 Install App</h3>
     <p style="color: #6d839b; font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem;">
-      Chrome has temporarily paused the automatic install button.<br><br> 
-      To install the app right now, please tap the <b>three dots (⋮)</b> in the top right of your browser and select <b>"Install app"</b> or <b>"Add to Home screen"</b>.
+      Chrome has paused the automatic install prompt. Tap the button below to force a refresh, or use the 3 dots (⋮) in your browser menu.
     </p>
-    <button class="btn" onclick="document.getElementById('installHelpModal').classList.add('hidden')">Got it</button>
+    <button class="btn" id="forceInstallBtn" style="margin-bottom: 1rem;">🔄 Force Install</button>
+    <button class="btn btn-secondary" onclick="document.getElementById('installHelpModal').classList.add('hidden')">Cancel</button>
   </div>
 </div>
 
@@ -549,7 +550,6 @@
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       currentUser = user; authScreen.classList.add('hidden'); mainApp.classList.remove('hidden'); loadingScreen.classList.add('hidden');
-      // Reset privacy mode on login
       document.body.classList.add('privacy-mode');
       await loadDataFromCloud();
     } else {
@@ -998,6 +998,7 @@
   
   let deferredPrompt;
   const installBtn = document.getElementById('installBtn');
+  const forceInstallBtn = document.getElementById('forceInstallBtn');
   
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault(); 
@@ -1012,6 +1013,33 @@
         deferredPrompt = null;
       } else {
         document.getElementById('installHelpModal').classList.remove('hidden');
+      }
+    });
+  }
+
+  // New function to force reset the service worker and cache
+  if (forceInstallBtn) {
+    forceInstallBtn.addEventListener('click', async () => {
+      forceInstallBtn.textContent = 'Resetting...';
+      try {
+        // 1. Unregister Service Worker
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (let registration of registrations) {
+            await registration.unregister();
+          }
+        }
+        // 2. Clear Caches
+        if ('caches' in window) {
+          const cacheNames = await caches.keys();
+          for (let name of cacheNames) {
+            await caches.delete(name);
+          }
+        }
+        // 3. Reload page
+        window.location.reload(true);
+      } catch (e) {
+        alert('Please use the 3 dots (⋮) menu to install.');
       }
     });
   }
