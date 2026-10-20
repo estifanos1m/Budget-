@@ -148,6 +148,9 @@
 </head>
 <body>
 
+<!-- WALLET DATALIST (For quick selection) -->
+<datalist id="wallet-options"></datalist>
+
 <!-- LOADING SCREEN -->
 <div id="loadingScreen" style="text-align: center; padding: 3rem 1rem; color: #6d839b;">
   <h2>Connecting to Cloud... ☁️</h2>
@@ -182,7 +185,7 @@
   
   <div class="swipe-wrapper" id="swipeWrapper">
     
-    <!-- PAGE 1: BUDGET MANAGER (Totals & Fields Only) -->
+    <!-- PAGE 1: BUDGET MANAGER -->
     <div class="page" id="budgetPage">
       <div class="container">
         <h1 style="justify-content: space-between;">
@@ -322,7 +325,7 @@
 
   let fields = []; let fieldColors = {}; let entries = [];
   let pnlStreams = []; 
-  let expandedStreams = new Set(); // Tracks which streams are expanded
+  let expandedStreams = new Set(); 
   let currentPnlMonth = new Date().toISOString().slice(0, 7); 
 
   const PALETTE = ['#1d3b5c', '#d14b4b', '#e67e22', '#f39c12', '#f1c40f', '#2ecc71', '#27ae60', '#16a085', '#3498db', '#2980b9', '#9b59b6', '#8e44ad', '#e84393', '#fd79a8', '#636e72', '#34495e', '#b33939', '#6f1e51'];
@@ -476,6 +479,9 @@
       const count = entries.filter(e => e.wallet === wName).length, total = walletTotal(wName);
       return `<div style="display: flex; justify-content: space-between; align-items: center; background: #eaf7ea; padding: 0.75rem 0.9rem; border-radius: 0.8rem; margin-bottom: 0.5rem; border-left: 4px solid #2d7a2d;"><div style="flex: 1; min-width: 0;"><div style="font-weight: 600; color: #1e5a1e; word-break: break-word;">💼 ${esc(wName)}</div><div style="font-size: 0.75rem; color: #4d8a4d;">${count} entr${count === 1 ? 'y' : 'ies'}</div></div><div style="font-weight: 700; color: ${total < 0 ? '#d14b4b' : '#2d7a2d'}; white-space: nowrap; margin-left: 0.5rem; font-size: 0.95rem;">${money(total)}</div></div>`;
     }).join('');
+    
+    // Populate the datalist for quick selection
+    document.getElementById('wallet-options').innerHTML = w.map(wName => `<option value="${esc(wName)}">`).join('');
   }
 
   function renderAll() { renderTotal(); renderBreakdown(); renderFields(); renderWallets(); }
@@ -565,7 +571,7 @@
     newRow.className = 'pnl-split-row';
     newRow.innerHTML = `
       <input type="number" class="pnl-amount" placeholder="Amount" step="0.01" style="flex:1;">
-      <input type="text" class="pnl-wallet" placeholder="Wallet" style="flex:1;">
+      <input type="text" class="pnl-wallet" placeholder="Wallet" list="wallet-options" style="flex:1;">
       <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="width: 30px; height: 30px; padding: 0;">✕</button>
     `;
     container.appendChild(newRow);
@@ -691,7 +697,7 @@
                 <div class="pnl-splits" id="splits-${stream.id}">
                   <div class="pnl-split-row">
                     <input type="number" class="pnl-amount" placeholder="Amount" step="0.01">
-                    <input type="text" class="pnl-wallet" placeholder="Wallet">
+                    <input type="text" class="pnl-wallet" placeholder="Wallet" list="wallet-options">
                   </div>
                 </div>
                 
