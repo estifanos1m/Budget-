@@ -542,7 +542,6 @@
       loadingScreen.classList.add('hidden');
       document.body.classList.add('privacy-mode');
       
-      // CRITICAL FIX: Reset state before loading
       fields = []; entries = []; fieldColors = {}; pnlStreams = [];
       
       await loadDataFromCloud();
@@ -553,7 +552,6 @@
       loadingScreen.classList.add('hidden');
       authSubmitBtn.textContent = isLoginMode ? 'Log In' : 'Create Account';
       
-      // CRITICAL FIX: Completely wipe local storage on logout
       localStorage.clear();
       
       fields = []; entries = []; fieldColors = {}; pnlStreams = [];
@@ -571,7 +569,6 @@
       const docRef = doc(db, "users", currentUser.uid); 
       const docSnap = await getDoc(docRef);
       
-      // Ensure completely blank slate before assigning
       fields = []; entries = []; fieldColors = {}; pnlStreams = [];
 
       if (docSnap.exists()) {
@@ -581,11 +578,9 @@
         fieldColors = data.fieldColors || {}; 
         pnlStreams = data.pnlStreams || [];
       } else {
-        // Brand new user, create blank document
         await saveToCloud();
       }
       
-      // Only save to local storage AFTER fetching the correct user data
       localStorage.setItem('bm_fields_v5', JSON.stringify(fields)); 
       localStorage.setItem('bm_entries_v5', JSON.stringify(entries)); 
       localStorage.setItem('bm_field_colors_v5', JSON.stringify(fieldColors));
@@ -1012,9 +1007,8 @@
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         deferredPrompt = null;
-      } else {
-        alert('To install: Tap the 3 dots (⋮) at the top right of your browser and select "Install app" or "Add to Home Screen".');
       }
+      // NO ELSE STATEMENT. If deferredPrompt doesn't exist, it does absolutely nothing.
     });
   }
 </script>
