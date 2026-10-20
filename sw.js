@@ -1,3 +1,9 @@
+self.addEventListener('install', (e) => {
+  self.skipWaiting();
+});
+self.addEventListener('activate', (e) => {
+  e.waitUntil(clients.claim());
+});
 self.addEventListener('fetch', function(event) {
-  // This empty listener is required for Chrome to show the Install button
+  event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
 });
